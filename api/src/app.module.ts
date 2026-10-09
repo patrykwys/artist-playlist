@@ -1,10 +1,11 @@
 import { Module, ValidationPipe } from '@nestjs/common';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { AppConfigModule } from './app-config.module.js';
+import { AuthModule } from './auth/auth.module.js';
 import { UpstreamErrorFilter } from './common/upstream-error.filter.js';
 
 @Module({
-  imports: [AppConfigModule],
+  imports: [AppConfigModule, AuthModule],
   providers: [
     // Registered here rather than in main.ts so they also apply in tests that build the app module.
     {
