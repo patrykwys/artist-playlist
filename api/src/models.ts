@@ -15,6 +15,11 @@ export interface GenreSeed {
 
 export type Seed = ArtistSeed | GenreSeed;
 
+export interface SearchResults {
+  artists: ArtistSeed[];
+  genres: GenreSeed[];
+}
+
 export interface PlaylistTrack {
   uri: string;
   title: string;
