@@ -1,5 +1,7 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { AuthStore } from './core/auth.store';
 
 @Component({
   selector: 'app-root',
@@ -8,4 +10,7 @@ import { RouterOutlet } from '@angular/router';
   styleUrl: './app.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AppComponent {}
+export class AppComponent {
+  protected readonly auth = inject(AuthStore);
+  protected readonly loginFailed = inject(DOCUMENT).location.search.includes('login=failed');
+}
