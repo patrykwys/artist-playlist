@@ -19,6 +19,24 @@
   letter-spacing: -0.02em;
 }
 
+.user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-name {
+  color: var(--text-muted);
+}
+
+.login {
+  justify-items: start;
+}
+
+.login p {
+  margin: 0;
+}
+
 .footer {
   color: var(--text-muted);
   font-size: 13px;
