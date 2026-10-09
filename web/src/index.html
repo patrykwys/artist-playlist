@@ -6,6 +6,12 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <script>
+    // The login cookie belongs to 127.0.0.1 (Spotify rejects "localhost" redirects), so always use that host.
+    if (location.hostname === 'localhost') {
+      location.replace(location.href.replace('//localhost', '//127.0.0.1'));
+    }
+  </script>
 </head>
 <body>
   <app-root></app-root>
