@@ -29,6 +29,18 @@
       </section>
     }
     @case ('signed-in') {
+      <nav class="nav">
+        <a
+          class="nav-link"
+          routerLink="/"
+          routerLinkActive
+          #generateLink="routerLinkActive"
+          [routerLinkActiveOptions]="{ exact: true }"
+          [attr.data-active]="generateLink.isActive"
+        >
+          Generate
+        </a>
+      </nav>
       <router-outlet />
     }
   }

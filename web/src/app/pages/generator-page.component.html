@@ -1,0 +1,43 @@
+<div class="stack">
+  <section class="card">
+    <h2 class="card-title">1. Add artists or genres</h2>
+    <app-seed-search
+      [query]="seeds.query()"
+      [results]="seeds.results()"
+      [addedKeys]="seeds.seedKeys()"
+      [isSearching]="seeds.isLoading()"
+      (queryChange)="seeds.search($event)"
+      (add)="seeds.add($event)"
+    />
+    @if (seeds.error(); as error) {
+      <p class="error">{{ error }}</p>
+    }
+    <app-seed-list [seeds]="seeds.seeds()" (remove)="seeds.remove($event)" />
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">2. Generate</h2>
+    <app-generate-panel
+      [canGenerate]="seeds.hasSeeds()"
+      [isGenerating]="generator.isLoading()"
+      (generate)="generate($event)"
+    />
+    @if (generator.error(); as error) {
+      <p class="error">{{ error }}</p>
+    }
+  </section>
+
+  @if (generator.isLoading()) {
+    <div class="pending-card">Building your playlist…</div>
+  }
+
+  @if (generator.latest(); as latest) {
+    <section class="latest">
+      <div class="latest-head">
+        <h2 class="section-title">Just created</h2>
+        <a class="latest-link" routerLink="/playlists">All my playlists →</a>
+      </div>
+      <app-playlist-card [playlist]="latest" [expanded]="true" />
+    </section>
+  }
+</div>
