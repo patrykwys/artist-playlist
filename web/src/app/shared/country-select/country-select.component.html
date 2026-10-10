@@ -1,0 +1,65 @@
+<div class="picker">
+  <div
+    ngCombobox
+    #combobox="ngCombobox"
+    class="trigger"
+    aria-label="Add a country"
+    [(expanded)]="expanded"
+    [disabled]="disabled()"
+  >
+    <span class="flag" aria-hidden="true">🌐</span>
+    <span class="name">{{ value().length === 0 ? 'Any country' : 'Add another country' }}</span>
+    <span class="chevron" aria-hidden="true">▾</span>
+  </div>
+
+  <ng-template ngComboboxPopup [combobox]="combobox">
+    <ul
+      ngComboboxWidget
+      ngListbox
+      #listbox="ngListbox"
+      class="menu"
+      focusMode="activedescendant"
+      selectionMode="explicit"
+      [multi]="true"
+      [activeDescendant]="listbox.activeDescendant()"
+      [value]="value()"
+      (valueChange)="update($event)"
+      (keydown.enter)="close()"
+    >
+      @for (country of countries; track country.code) {
+        <li ngOption class="option" [value]="country.code" [label]="country.name" (click)="close()">
+          <img
+            class="flag"
+            [src]="country.code | flagUrl"
+            alt=""
+            width="20"
+            height="15"
+            loading="lazy"
+          />
+          <span class="name">{{ country.name }}</span>
+          <span class="check" aria-hidden="true">✓</span>
+        </li>
+      }
+    </ul>
+  </ng-template>
+</div>
+
+@if (selected().length > 0) {
+  <ul class="chips" aria-label="Selected countries">
+    @for (country of selected(); track country.code) {
+      <li class="chip">
+        <img class="flag" [src]="country.code | flagUrl" alt="" width="20" height="15" />
+        <span>{{ country.name }}</span>
+        <button
+          type="button"
+          class="chip-remove"
+          [attr.aria-label]="'Remove ' + country.name"
+          [disabled]="disabled()"
+          (click)="remove(country.code)"
+        >
+          ×
+        </button>
+      </li>
+    }
+  </ul>
+}

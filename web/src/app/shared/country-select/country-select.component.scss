@@ -1,0 +1,97 @@
+:host {
+  display: grid;
+  gap: 8px;
+}
+
+/* The menu is positioned against the trigger, not the whole host (the chips sit below). */
+.picker {
+  position: relative;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  cursor: pointer;
+  user-select: none;
+
+  &:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+  }
+
+  &[aria-disabled='true'] {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.name {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chevron {
+  color: var(--text-muted);
+}
+
+.flag {
+  flex: none;
+  width: 20px;
+  height: 15px;
+  object-fit: cover;
+  border-radius: 2px;
+  font-size: 14px;
+  line-height: 15px;
+  text-align: center;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  max-height: 280px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+
+  &[data-active='true'] {
+    background: var(--surface-hover);
+  }
+
+  &[aria-selected='true'] {
+    background: var(--accent-soft);
+    font-weight: 600;
+  }
+}
+
+.check {
+  visibility: hidden;
+  color: var(--accent);
+
+  [aria-selected='true'] > & {
+    visibility: visible;
+  }
+}

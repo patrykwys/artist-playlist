@@ -1,0 +1,144 @@
+.range {
+  display: grid;
+  gap: 8px;
+}
+
+.range[data-disabled='true'] {
+  opacity: 0.5;
+}
+
+.range-boxes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.range-box {
+  width: 110px;
+  text-align: center;
+}
+
+.range-dash {
+  color: var(--text-muted);
+}
+
+.range-track {
+  position: relative;
+  height: 28px;
+}
+
+.range-track::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  transform: translateY(-50%);
+}
+
+.range-fill {
+  position: absolute;
+  left: var(--fill-start);
+  right: var(--fill-end);
+  top: 50%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+  transform: translateY(-50%);
+}
+
+/* Two native range inputs stacked on one track: only their handles take clicks. */
+.range-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  appearance: none;
+  pointer-events: none;
+}
+
+.range-thumb[data-on-top='true'] {
+  z-index: 1;
+}
+
+.range-thumb:focus {
+  outline: none;
+}
+
+.range-thumb::-webkit-slider-runnable-track {
+  background: transparent;
+}
+
+.range-thumb::-moz-range-track {
+  background: transparent;
+}
+
+.range-thumb::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: var(--surface);
+  appearance: none;
+  cursor: grab;
+  pointer-events: auto;
+}
+
+.range-thumb::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: var(--surface);
+  cursor: grab;
+  pointer-events: auto;
+}
+
+.range-thumb:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.range-thumb:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.range-edges {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.range-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.range-preset {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.range-preset:hover {
+  background: var(--surface-hover);
+}
+
+.range-preset[data-active='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}

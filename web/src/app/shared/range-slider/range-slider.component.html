@@ -1,0 +1,75 @@
+<div class="range" [attr.data-disabled]="disabled()">
+  <div class="range-boxes">
+    <input
+      #minBox
+      class="range-box"
+      inputmode="decimal"
+      autocomplete="off"
+      placeholder="Any"
+      [value]="minText()"
+      [disabled]="disabled()"
+      (change)="type('min', minBox)"
+      (keydown.enter)="minBox.blur()"
+    />
+    <span class="range-dash">–</span>
+    <input
+      #maxBox
+      class="range-box"
+      inputmode="decimal"
+      autocomplete="off"
+      placeholder="Any"
+      [value]="maxText()"
+      [disabled]="disabled()"
+      (change)="type('max', maxBox)"
+      (keydown.enter)="maxBox.blur()"
+    />
+  </div>
+
+  <div class="range-track" [style.--fill-start]="fillStart()" [style.--fill-end]="fillEnd()">
+    <div class="range-fill"></div>
+    <input
+      #minThumb
+      type="range"
+      class="range-thumb"
+      min="0"
+      [max]="resolution"
+      [value]="minPosition()"
+      [attr.data-on-top]="minOnTop()"
+      [disabled]="disabled()"
+      (input)="drag('min', minThumb)"
+      (change)="touch.emit()"
+    />
+    <input
+      #maxThumb
+      type="range"
+      class="range-thumb"
+      min="0"
+      [max]="resolution"
+      [value]="maxPosition()"
+      [disabled]="disabled()"
+      (input)="drag('max', maxThumb)"
+      (change)="touch.emit()"
+    />
+  </div>
+
+  <div class="range-edges">
+    <span>{{ edgeLabels().floor }}</span>
+    <span>{{ edgeLabels().ceiling }}</span>
+  </div>
+
+  @if (presetItems().length > 0) {
+    <div class="range-presets">
+      @for (preset of presetItems(); track preset.label) {
+        <button
+          type="button"
+          class="range-preset"
+          [attr.data-active]="preset.active"
+          [disabled]="disabled()"
+          (click)="pick(preset)"
+        >
+          {{ preset.label }}
+        </button>
+      }
+    </div>
+  }
+</div>
