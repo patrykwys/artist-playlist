@@ -1,0 +1,35 @@
+<section class="playlists">
+  <div class="playlists-head">
+    <div>
+      <h2 class="section-title">My playlists</h2>
+      @if (store.playlists().length > 0) {
+        <p class="summary">
+          {{ store.playlists().length }} {{ store.playlists().length === 1 ? 'playlist' : 'playlists' }} ·
+          {{ store.totalSongs() }} songs · {{ totalPlaytime() }}
+        </p>
+      }
+    </div>
+    <button type="button" class="button button-small" [disabled]="store.isLoading()" (click)="store.load('spotify')">
+      {{ store.isLoading() ? 'Refreshing…' : 'Refresh' }}
+    </button>
+  </div>
+
+  @if (store.error(); as error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  @if (!store.loaded() && store.isLoading()) {
+    <p class="muted">Loading your playlists…</p>
+  }
+
+  @if (store.loaded() && store.playlists().length === 0) {
+    <div class="card empty">
+      <p>No playlists made with Artist mix in your Spotify library yet.</p>
+      <a class="button button-primary" routerLink="/">Generate one</a>
+    </div>
+  }
+
+  @for (item of store.playlists(); track item.id) {
+    <app-playlist-card [playlist]="item" />
+  }
+</section>

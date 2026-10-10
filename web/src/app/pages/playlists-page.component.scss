@@ -1,0 +1,25 @@
+.playlists {
+  display: grid;
+  gap: 14px;
+}
+
+.playlists-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.summary {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.empty {
+  justify-items: start;
+}
+
+.empty p {
+  margin: 0;
+}

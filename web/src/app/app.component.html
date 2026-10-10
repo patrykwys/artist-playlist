@@ -40,6 +40,15 @@
         >
           Generate
         </a>
+        <a
+          class="nav-link"
+          routerLink="/playlists"
+          routerLinkActive
+          #playlistsLink="routerLinkActive"
+          [attr.data-active]="playlistsLink.isActive"
+        >
+          My playlists
+        </a>
       </nav>
       <router-outlet />
     }
