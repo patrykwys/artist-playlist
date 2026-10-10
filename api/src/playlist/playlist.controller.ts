@@ -1,13 +1,18 @@
-import { Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { CurrentSession, SessionGuard } from '../auth/session.guard.js';
 import type { Session } from '../auth/session.service.js';
 import { GeneratedPlaylist } from '../models.js';
+import { GeneratePlaylistDto } from './dto/generate-playlist.dto.js';
 import { PlaylistLibraryService } from './playlist-library.service.js';
+import { PlaylistService } from './playlist.service.js';
 
 @Controller('playlists')
 @UseGuards(SessionGuard)
 export class PlaylistController {
-  constructor(private readonly library: PlaylistLibraryService) {}
+  constructor(
+    private readonly playlistService: PlaylistService,
+    private readonly library: PlaylistLibraryService,
+  ) {}
 
   /** Playlists this app has made, newest first, from the database. */
   @Get()
@@ -20,5 +25,10 @@ export class PlaylistController {
   async sync(@CurrentSession() session: Session): Promise<GeneratedPlaylist[]> {
     await this.library.sync(session);
     return this.library.list(session);
+  }
+
+  @Post()
+  generate(@CurrentSession() session: Session, @Body() request: GeneratePlaylistDto): Promise<GeneratedPlaylist> {
+    return this.playlistService.generate(session, request);
   }
 }
