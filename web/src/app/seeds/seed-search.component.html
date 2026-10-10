@@ -1,0 +1,38 @@
+<div class="search">
+  <div class="search-bar">
+    <input
+      #box
+      class="search-input"
+      type="search"
+      autocomplete="off"
+      placeholder="Artist or genre, e.g. Snow Strippers or witch house"
+      [value]="query()"
+      (input)="queryChange.emit(box.value)"
+      (keydown.enter)="addTop()"
+    />
+    <button type="button" class="button" [disabled]="!topRow()" (click)="addTop()">Add</button>
+  </div>
+
+  @if (isSearching()) {
+    <p class="search-status">Searching…</p>
+  }
+
+  @if (rows().length > 0) {
+    <ul class="results">
+      @for (row of rows(); track row.key) {
+        <li class="result" [attr.data-type]="row.seed.type" [attr.data-added]="row.added">
+          @if (row.imageUrl) {
+            <img class="result-image" [src]="row.imageUrl" alt="" />
+          } @else {
+            <span class="result-image"></span>
+          }
+          <span class="result-name">{{ row.seed.name }}</span>
+          <span class="result-kind">{{ row.label }}</span>
+          <button type="button" class="button button-small" [disabled]="row.added" (click)="add.emit(row.seed)">
+            {{ row.added ? 'Added' : 'Add' }}
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</div>
