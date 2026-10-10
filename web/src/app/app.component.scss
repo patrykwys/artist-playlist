@@ -29,6 +29,33 @@
   color: var(--text-muted);
 }
 
+.nav {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  justify-self: start;
+}
+
+.nav-link {
+  padding: 7px 16px;
+  border-radius: 7px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  color: var(--text);
+}
+
+.nav-link[data-active='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 .login {
   justify-items: start;
 }

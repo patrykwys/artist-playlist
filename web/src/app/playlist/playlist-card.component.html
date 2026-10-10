@@ -1,0 +1,64 @@
+<article class="playlist-card">
+  <div class="cover" [attr.data-layout]="coverLayout()">
+    @for (src of coverImages(); track src) {
+      <img class="cover-image" alt="" [src]="src" />
+    }
+  </div>
+
+  <div class="body">
+    <div class="head">
+      <h3 class="name">{{ playlist().name }}</h3>
+      @if (playlist().createdAt; as createdAt) {
+        <span class="date">{{ createdAt | date: 'd MMM y, HH:mm' }}</span>
+      }
+    </div>
+
+    <ul class="stats">
+      <li class="stat">
+        <span class="stat-value">{{ playlist().tracks.length }}</span>
+        <span class="stat-label">songs</span>
+      </li>
+      <li class="stat">
+        <span class="stat-value">{{ playtime() }}</span>
+        <span class="stat-label">playtime</span>
+      </li>
+      <li class="stat">
+        <span class="stat-value">{{ artistCount() }}</span>
+        <span class="stat-label">artists</span>
+      </li>
+      @if (playlist().mode; as mode) {
+        <li class="stat">
+          <span class="stat-value">{{ mode === 'bridge' ? 'Bridge' : 'Blend' }}</span>
+          <span class="stat-label">mix</span>
+        </li>
+      }
+    </ul>
+
+    @if (playlist().seeds.length > 0) {
+      <div class="seeds">
+        @for (seed of playlist().seeds; track $index) {
+          <span class="seed" [attr.data-type]="seed.type">{{ seed.name }}</span>
+        }
+      </div>
+    }
+
+    <div class="actions">
+      <a class="button button-primary button-small" target="_blank" rel="noopener" [href]="playlist().url">
+        Open in Spotify
+      </a>
+    </div>
+  </div>
+
+  <details class="tracks" [open]="expanded()">
+    <summary class="tracks-toggle">Tracks</summary>
+    <ol class="track-list">
+      @for (track of tracks(); track track.uri) {
+        <li class="track">
+          <span class="track-title">{{ track.title }}</span>
+          <span class="track-artist">{{ track.artist }}</span>
+          <span class="track-length">{{ track.length }}</span>
+        </li>
+      }
+    </ol>
+  </details>
+</article>

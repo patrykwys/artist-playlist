@@ -1,0 +1,32 @@
+.stack {
+  display: grid;
+  gap: 20px;
+}
+
+.pending-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 22px 18px;
+  border: 1px dashed var(--accent);
+  border-radius: 14px;
+  color: var(--text-muted);
+}
+
+.latest {
+  display: grid;
+  gap: 12px;
+}
+
+.latest-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.latest-link {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}

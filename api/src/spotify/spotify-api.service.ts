@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { SpotifyAuthService } from '../auth/spotify-auth.service.js';
 import type { Session } from '../auth/session.service.js';
 import { RequestQueue, fetchJson } from '../common/http.js';
+import { SpotifyTrackHit } from '../engine/track-matching.js';
 import { ArtistSeed, PlaylistTrack } from '../models.js';
 
 const BASE_URL = 'https://api.spotify.com/v1';
@@ -54,6 +55,10 @@ interface ArtistSearchResponse {
   artists: { items: (SpotifyArtist | null)[] };
 }
 
+interface TrackSearchResponse {
+  tracks: { items: (SpotifyTrack | null)[] };
+}
+
 interface PlaylistResponse {
   id: string;
   external_urls: { spotify: string };
@@ -96,6 +101,12 @@ export class SpotifyApiService {
     return response.artists.items
       .filter((artist): artist is SpotifyArtist => artist !== null)
       .map((artist) => ({ type: 'artist', id: artist.id, name: artist.name, imageUrl: pickImage(artist.images, 64) }));
+  }
+
+  /** Field-filtered search first; plain-text search as a fallback when the filters find nothing. */
+  async searchTracks(session: Session, artist: string, title: string): Promise<SpotifyTrackHit[]> {
+    const filtered = await this.#searchTracks(session, `track:${clean(title)} artist:${clean(artist)}`);
+    return filtered.length > 0 ? filtered : this.#searchTracks(session, `${clean(artist)} ${clean(title)}`);
   }
 
   async createPlaylist(session: Session, name: string, description: string): Promise<{ id: string; url: string }> {
@@ -170,6 +181,20 @@ export class SpotifyApiService {
     return { items, complete: false };
   }
 
+  async #searchTracks(session: Session, query: string): Promise<SpotifyTrackHit[]> {
+    const params = new URLSearchParams({ q: query, type: 'track', limit: String(SEARCH_LIMIT) });
+    const response = await this.#request<TrackSearchResponse>(session, `/search?${params}`);
+    return response.tracks.items
+      .filter((track): track is SpotifyTrack => track !== null)
+      .map((track) => ({
+        uri: track.uri,
+        name: track.name,
+        artists: track.artists.map((artist) => artist.name),
+        durationMs: track.duration_ms,
+        imageUrl: pickImage(track.album?.images, 300),
+      }));
+  }
+
   async #request<T>(session: Session, path: string, init: RequestInit = {}): Promise<T> {
     const token = await this.auth.accessToken(session);
     const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
@@ -181,4 +206,9 @@ export class SpotifyApiService {
 function pickImage(images: SpotifyImage[] | undefined, minWidth: number): string | null {
   const sorted = [...(images ?? [])].sort((a, b) => (a.width ?? 0) - (b.width ?? 0));
   return (sorted.find((image) => (image.width ?? 0) >= minWidth) ?? sorted.at(-1))?.url ?? null;
+}
+
+/** Quotes and colons would be read as search syntax. */
+function clean(value: string): string {
+  return value.replace(/["':]/g, ' ').replace(/\s+/g, ' ').trim();
 }

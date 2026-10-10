@@ -29,6 +29,27 @@
       </section>
     }
     @case ('signed-in') {
+      <nav class="nav">
+        <a
+          class="nav-link"
+          routerLink="/"
+          routerLinkActive
+          #generateLink="routerLinkActive"
+          [routerLinkActiveOptions]="{ exact: true }"
+          [attr.data-active]="generateLink.isActive"
+        >
+          Generate
+        </a>
+        <a
+          class="nav-link"
+          routerLink="/playlists"
+          routerLinkActive
+          #playlistsLink="routerLinkActive"
+          [attr.data-active]="playlistsLink.isActive"
+        >
+          My playlists
+        </a>
+      </nav>
       <router-outlet />
     }
   }

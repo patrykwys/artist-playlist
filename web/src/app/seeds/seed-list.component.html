@@ -1,0 +1,20 @@
+@if (items().length === 0) {
+  <p class="empty">Add at least one artist or genre to build a playlist.</p>
+} @else {
+  <ul class="chips">
+    @for (item of items(); track item.key) {
+      <li class="chip" [attr.data-type]="item.seed.type">
+        <span class="chip-kind">{{ item.seed.type === 'genre' ? 'Genre' : 'Artist' }}</span>
+        <span class="chip-name">{{ item.seed.name }}</span>
+        <button
+          type="button"
+          class="chip-remove"
+          [attr.aria-label]="'Remove ' + item.seed.name"
+          (click)="remove.emit(item.seed)"
+        >
+          ×
+        </button>
+      </li>
+    }
+  </ul>
+}

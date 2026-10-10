@@ -1,0 +1,66 @@
+<div class="panel">
+  <div class="fields">
+    <label class="field field-wide">
+      <span class="field-label">Playlist name</span>
+      <input placeholder="Mix: your seeds" [formField]="optionsForm.name" />
+    </label>
+
+    <label class="field">
+      <span class="field-label">Tracks</span>
+      <input type="number" [formField]="optionsForm.length" />
+    </label>
+
+    <label class="field">
+      <span class="field-label">Mix</span>
+      <select [formField]="optionsForm.mode">
+        <option value="blend">Blend (each seed's share)</option>
+        <option value="bridge">Bridge (common ground)</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="field">
+    <span class="field-label">Last.fm listeners per artist</span>
+    <app-range-slider
+      [formField]="optionsForm.listeners"
+      [floor]="listeners.floor"
+      [ceiling]="listeners.ceiling"
+      scale="log"
+      [format]="listeners.format"
+      [parse]="listeners.parse"
+      [presets]="listeners.presets"
+      [openEnded]="true"
+    />
+  </div>
+
+  <div class="field">
+    <span class="field-label">Artists from</span>
+    <app-country-select [formField]="optionsForm.countries" />
+  </div>
+
+  <label class="check">
+    <input type="checkbox" [formField]="optionsForm.includeSeedArtists" />
+    Include tracks by the seed artists
+  </label>
+
+  @for (error of optionsForm().errorSummary(); track $index) {
+    <p class="field-error">{{ error.message }}</p>
+  }
+
+  <div class="actions">
+    <button
+      type="button"
+      class="button button-primary"
+      [disabled]="!canGenerate() || isGenerating() || optionsForm().invalid()"
+      (click)="submit()"
+    >
+      {{ isGenerating() ? 'Generating…' : 'Generate playlist' }}
+    </button>
+    @if (isGenerating()) {
+      <span class="actions-note"
+        >First runs take 20–60 s while Last.fm data is fetched (up to 2 min with countries picked);
+        reruns are faster.</span
+      >
+    }
+  </div>
+</div>

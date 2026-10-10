@@ -3,10 +3,11 @@ import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { AppConfigModule } from './app-config.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { UpstreamErrorFilter } from './common/upstream-error.filter.js';
+import { PlaylistModule } from './playlist/playlist.module.js';
 import { SearchModule } from './search/search.module.js';
 
 @Module({
-  imports: [AppConfigModule, AuthModule, SearchModule],
+  imports: [AppConfigModule, AuthModule, SearchModule, PlaylistModule],
   providers: [
     // Registered here rather than in main.ts so they also apply in tests that build the app module.
     {

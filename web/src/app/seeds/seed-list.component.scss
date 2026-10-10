@@ -1,0 +1,16 @@
+.empty {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.chip[data-type='genre'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.chip-kind {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
