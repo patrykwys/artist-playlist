@@ -60,6 +60,91 @@ export interface ScoringParams {
   tfidf: boolean;
 }
 
+export type EvaluationStatus = 'running' | 'done' | 'failed';
+
+/** A mean with a 95% range. */
+export interface Interval {
+  mean: number;
+  low: number;
+  high: number;
+}
+
+/**
+ * better / worse: the 95% range of the per-playlist difference in hit rate lies wholly above / below zero.
+ * unclear: it straddles zero, so the measured playlists can't tell the two apart.
+ */
+export type Verdict = 'better' | 'worse' | 'unclear';
+
+/** How well one set of ScoringParams predicts the rest of your playlists from three of their artists. */
+export interface EvaluationScore {
+  label: string;
+  params: ScoringParams;
+  /** Mean share of held-out artists in the top 50 (the hit rate). */
+  recall: number;
+  /** Like recall, but hits near the top count more. */
+  ndcg: number;
+  /** Playlists where this beat / fell below the baseline's recall. */
+  wins: number;
+  losses: number;
+  /** Hit rate minus the baseline's, per playlist, with a bootstrap 95% range. Null for the baseline itself. */
+  vsBaseline: Interval | null;
+  verdict: Verdict | null;
+  /** Guardrail: powers of ten the top 50 sit above (+) or below (−) the seeds in Last.fm listeners. */
+  drift: number | null;
+  /** Guardrail: mean tag cosine between the top 20 artists; lower is more varied. */
+  sameness: number;
+}
+
+export interface TuningResults {
+  /**
+   * Each playlist scored with the weights tuned on the other playlists (leave-one-playlist-out): what tuning
+   * really gains on a playlist it has not seen. Compare this, not `best`, with the current formula.
+   */
+  crossValidated: EvaluationScore;
+  /** The weights those rounds chose most often, scored on every playlist. */
+  recommended: EvaluationScore;
+  /** In how many of the rounds the recommended weights won: low agreement means the choice is noise. */
+  chosenIn: { rounds: number; total: number };
+  /** The best grid points scored on the same playlists they were picked on: optimistic by construction. */
+  best: EvaluationScore[];
+}
+
+export interface EvaluatedPlaylist {
+  id: string;
+  name: string;
+  artists: number;
+  /** Mean share of held-out artists that were candidates at all: the most any ranking could reach. */
+  poolRecall: number | null;
+  /** Why the playlist was left out, when it was. */
+  skipped: string | null;
+}
+
+export interface EvaluationResults {
+  playlists: EvaluatedPlaylist[];
+  /** The original formula first, then the current one. */
+  presets: EvaluationScore[];
+  /** Null when not asked for, or with fewer playlists than cross-validation needs. */
+  tuning: TuningResults | null;
+}
+
+export interface EvaluationRun {
+  id: string;
+  status: EvaluationStatus;
+  startedAt: string;
+  finishedAt: string | null;
+  /** Folds (seed draws) done so far, of `total`. */
+  progress: { done: number; total: number };
+  results: EvaluationResults | null;
+  error: string | null;
+}
+
+/** One of your own playlists the evaluation can learn from. */
+export interface EvaluationPlaylist {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+}
+
 export interface PlaylistTrack {
   uri: string;
   title: string;
