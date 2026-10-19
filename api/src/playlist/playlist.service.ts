@@ -1,13 +1,16 @@
 import { Injectable, Logger, UnprocessableEntityException } from '@nestjs/common';
 import type { Session } from '../auth/session.service.js';
+import { flowOrder } from '../engine/flow.js';
 import { CandidatePool, DEFAULT_PARAMS, RankedBucket, lambdaForVariety, rankPool } from '../engine/ranking.js';
 import { alternateGroups, interleave } from '../engine/scoring.js';
+import { TagMap, cosine } from '../engine/tags.js';
+import { TagWeigher, tfidf, unweighted } from '../engine/tfidf.js';
 import { GenerateRequest, GeneratedPlaylist, PlaylistSeed, ScoringParams } from '../models.js';
 import { CandidatePoolService } from '../recommender/candidate-pool.service.js';
 import { SpotifyApiService } from '../spotify/spotify-api.service.js';
 import { PlaylistLibraryService } from './playlist-library.service.js';
 import { buildDescription } from './playlist-description.js';
-import { PickableArtist, TrackPickerService } from './track-picker.service.js';
+import { PickableArtist, TrackPick, TrackPickerService } from './track-picker.service.js';
 
 @Injectable()
 export class PlaylistService {
@@ -43,8 +46,9 @@ export class PlaylistService {
     const ranked = rankPool(pool, params, request.mode);
     const buckets = this.#artistOrder(pool, ranked, request);
     const picks = await this.trackPicker.fill(session, buckets, { length: request.length, deepCuts: request.deepCuts });
-    // Seeds take turns, so no seed's share is bunched up at the start or the end.
-    const tracks = interleave(picks).map((pick) => pick.track);
+    // The same rarity weighting the ranking used, for the running order.
+    const weigh = params.tfidf ? tfidf(pool.artists.map((artist) => artist.tags)) : unweighted;
+    const tracks = this.#flow(weigh, interleave(picks)).map((pick) => pick.track);
     if (tracks.length === 0) {
       throw new UnprocessableEntityException('No tracks could be matched on Spotify for these seeds');
     }
@@ -93,6 +97,21 @@ export class PlaylistService {
       });
     }
     return buckets;
+  }
+
+  /** Orders the picks so neighbouring tracks share (rarity-weighted) tags, starting from the strongest pick. */
+  #flow(weigh: TagWeigher, picks: TrackPick[]): TrackPick[] {
+    const vectors = new Map<string, TagMap>();
+    const vectorOf = (artist: PickableArtist): TagMap => {
+      const vector = vectors.get(artist.key) ?? weigh(artist.tags);
+      vectors.set(artist.key, vector);
+      return vector;
+    };
+    return flowOrder(
+      picks,
+      (a, b) => cosine(vectorOf(a.artist), vectorOf(b.artist)),
+      (pick) => pick.artist.key,
+    );
   }
 }
 
