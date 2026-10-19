@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { CandidatePool, PoolArtist, PoolSeed } from '../engine/ranking.js';
 import { artistKey, shortlist } from '../engine/scoring.js';
 import { RawTag, TagMap, normalizeTag, toTagMap, topRawTags, topTags } from '../engine/tags.js';
+import { Edges, WalkScores, walkScores } from '../engine/walk.js';
 import { LastfmApiService } from '../lastfm/lastfm-api.service.js';
 import { ListenerFilter, PlaylistSeed } from '../models.js';
 import { WikidataApiService } from '../wikidata/wikidata-api.service.js';
@@ -17,26 +18,34 @@ const POOL_DEPTH: PoolDepth = { similar: 50, genreArtists: 60 };
 const DEEP_POOL_DEPTH: PoolDepth = { similar: 250, genreArtists: 250 };
 const TAG_ARTISTS_LIMIT = 30;
 const POOL_TAGS_PER_SEED = 3;
-/** Match given to an artist found through the seed's top tags, before the rank discount. */
+/** Direct-link strength of an artist found through the seed's top tags, before the rank discount. */
 const SIMILAR_TAG_PICK_MATCH = 0.3;
 const GENRE_PICK_MATCH = 0.9;
 const MIN_PROFILE_TAGS = 3;
 const WIKIDATA_TAG_WEIGHT = 50;
+/** Second hop: the seed's closest neighbours whose own similar artists are read (one Last.fm call each). */
+const SECOND_HOP_NEIGHBOURS = 8;
+const SECOND_HOP_SIMILAR = 50;
+const SECOND_HOP_DAMPING = 0.5;
 /** Per selected country: artists found by the seeds' top tags (one MusicBrainz search per country). */
 const COUNTRY_DISCOVERY_LIMIT = 60;
 const COUNTRY_DISCOVERY_TAGS_PER_SEED = 4;
 /** Each lookup is one Last.fm call (cached after); 400 is about 100 s on a first run. */
 const MAX_FILTER_LOOKUPS = 400;
 
+export type WalkKind = keyof WalkScores;
+
 export interface PoolRequest {
   seeds: PlaylistSeed[];
-  /** Candidates kept per seed before filters; each costs Last.fm lookups on a first run. */
+  /** Candidates kept per seed (per walk) before filters; each costs Last.fm lookups on a first run. */
   perSeed: number;
   /** How many candidates the filters should try to leave. */
   wanted: number;
   listeners: ListenerFilter | null;
   /** ISO 3166-1 alpha-2; each gets an equal share of `wanted`. */
   countries: string[];
+  /** Walks that pick the shortlist: the formula's own, or both so the old and new formulas see the same pool. */
+  walks: WalkKind[];
 }
 
 type ArtistFilters = Pick<PoolRequest, 'listeners' | 'countries'>;
@@ -49,6 +58,7 @@ interface ProfiledSeed {
   /** Null for a genre seed. */
   artistName: string | null;
   tags: TagMap;
+  listeners: number | null;
   /** Artist key → link strength: Last.fm similar artists plus the top artists of the seed's tags. */
   direct: Map<string, number>;
   names: Map<string, string>;
@@ -56,7 +66,7 @@ interface ProfiledSeed {
 
 /**
  * Fetches everything a ranking needs from Last.fm, MusicBrainz and Wikidata (all cached), and nothing more:
- * scoring the result is the pure `rankPool`.
+ * scoring the result is the pure `rankPool`, so the generator and the evaluation harness rank the same data.
  */
 @Injectable()
 export class CandidatePoolService {
@@ -73,12 +83,14 @@ export class CandidatePoolService {
     const profiled = await Promise.all(request.seeds.map((seed) => this.#profile(seed, depth)));
     const names = new Map(profiled.flatMap((seed) => [...seed.names]));
     const seedKeys = new Set(profiled.flatMap((seed) => (seed.artistName ? [artistKey(seed.artistName)] : [])));
-    const matches = profiled.map((seed) => scaled(seed.direct, seedKeys));
+    const walks = await Promise.all(profiled.map((seed) => this.#walk(seed, seedKeys, names)));
+
+    const ordering = walks.flatMap((walk) => request.walks.map((kind) => walk[kind]));
 
     const isFiltered = request.listeners !== null || request.countries.length > 0;
     const keys: Shortlist = isFiltered
-      ? await this.#filteredShortlist(matches, profiled, seedKeys, names, request)
-      : new Map(shortlist(matches, request.perSeed, seedKeys).map((key) => [key, null]));
+      ? await this.#filteredShortlist(ordering, profiled, seedKeys, names, request)
+      : new Map(shortlist(ordering, request.perSeed, seedKeys).map((key) => [key, null]));
 
     const artists = await Promise.all(
       [...keys].map(([key, country]) => this.#poolArtist(key, names.get(key) ?? key, country)),
@@ -87,10 +99,18 @@ export class CandidatePoolService {
       (seed, index): PoolSeed => ({
         label: seed.label,
         artist: seed.artistName
-          ? { key: artistKey(seed.artistName), name: seed.artistName, tags: seed.tags, listeners: null, country: null }
+          ? {
+              key: artistKey(seed.artistName),
+              name: seed.artistName,
+              tags: seed.tags,
+              listeners: seed.listeners,
+              country: null,
+            }
           : null,
         tags: seed.tags,
-        matches: matches[index],
+        listeners: seed.listeners,
+        oneHop: walks[index].oneHop,
+        twoHop: walks[index].twoHop,
       }),
     );
     return { seeds, artists };
@@ -111,10 +131,10 @@ export class CandidatePoolService {
       const tags = new Map([[normalizeTag(seed.name), 100]]);
       const artists = await this.lastfm.tagTopArtists(seed.name, depth.genreArtists);
       artists.forEach((name, rank) => link(name, rankDiscount(GENRE_PICK_MATCH, rank, artists.length)));
-      return { label: seed.name, artistName: null, tags, direct, names };
+      return { label: seed.name, artistName: null, tags, listeners: null, direct, names };
     }
 
-    const rawTags = await this.#artistTags(seed.name);
+    const [rawTags, info] = await Promise.all([this.#artistTags(seed.name), this.lastfm.artistInfo(seed.name)]);
     const [similar, tagLists] = await Promise.all([
       this.lastfm.similarArtists(seed.name, depth.similar),
       Promise.all(
@@ -125,7 +145,14 @@ export class CandidatePoolService {
     tagLists.forEach((list) =>
       list.forEach((name, rank) => link(name, rankDiscount(SIMILAR_TAG_PICK_MATCH, rank, list.length))),
     );
-    return { label: seed.name, artistName: seed.name, tags: toTagMap(rawTags), direct, names };
+    return {
+      label: seed.name,
+      artistName: seed.name,
+      tags: toTagMap(rawTags),
+      listeners: info?.listeners ?? null,
+      direct,
+      names,
+    };
   }
 
   /** Last.fm tags, topped up with Wikidata genres when Last.fm has too few to go on. */
@@ -138,6 +165,30 @@ export class CandidatePoolService {
     const genres = info?.mbid ? await this.wikidata.genresByMusicBrainzId(info.mbid) : [];
     this.logger.log(`Thin Last.fm tags for ${artist}; added ${genres.length} Wikidata genres`);
     return [...lastfmTags, ...genres.map((name) => ({ name, count: WIKIDATA_TAG_WEIGHT }))];
+  }
+
+  /** Reads the similar artists of the seed's closest neighbours, then scores one and two hops out. */
+  async #walk(seed: ProfiledSeed, exclude: ReadonlySet<string>, names: Map<string, string>): Promise<WalkScores> {
+    const closest = [...seed.direct]
+      .filter(([key]) => !exclude.has(key))
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, SECOND_HOP_NEIGHBOURS);
+    const neighbours = new Map<string, Edges>(
+      await Promise.all(
+        closest.map(async ([key]): Promise<[string, Edges]> => {
+          const neighbour = names.get(key) ?? key;
+          const similar = await this.lastfm.similarArtists(neighbour, SECOND_HOP_SIMILAR);
+          const edges = new Map<string, number>();
+          for (const artist of similar) {
+            const similarKey = artistKey(artist.name);
+            names.set(similarKey, names.get(similarKey) ?? artist.name);
+            edges.set(similarKey, Math.max(edges.get(similarKey) ?? 0, artist.match));
+          }
+          return [key, edges];
+        }),
+      ),
+    );
+    return walkScores(seed.direct, neighbours, SECOND_HOP_DAMPING, exclude);
   }
 
   async #poolArtist(key: string, name: string, country: string | null): Promise<PoolArtist> {
@@ -260,13 +311,6 @@ export class CandidatePoolService {
 /** Rank 0 gets the full base strength, the last rank half of it. */
 function rankDiscount(base: number, rank: number, count: number): number {
   return base * (1 - (0.5 * rank) / Math.max(count, 1));
-}
-
-/** Scaled so the closest artist scores 1; `exclude` (the seeds) never scores. */
-function scaled(direct: ReadonlyMap<string, number>, exclude: ReadonlySet<string>): Map<string, number> {
-  const kept = [...direct].filter(([key, score]) => !exclude.has(key) && score > 0);
-  const best = Math.max(0, ...kept.map(([, score]) => score));
-  return new Map(best === 0 ? [] : kept.map(([key, score]) => [key, score / best]));
 }
 
 function withinRange(listeners: number, { min, max }: ListenerFilter): boolean {

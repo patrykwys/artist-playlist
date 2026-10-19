@@ -1,8 +1,8 @@
 import { Injectable, Logger, UnprocessableEntityException } from '@nestjs/common';
 import type { Session } from '../auth/session.service.js';
-import { CandidatePool, RankedBucket, rankPool } from '../engine/ranking.js';
+import { CandidatePool, DEFAULT_PARAMS, RankedBucket, lambdaForVariety, rankPool } from '../engine/ranking.js';
 import { alternateGroups, interleave } from '../engine/scoring.js';
-import { GenerateRequest, GeneratedPlaylist, PlaylistSeed, PlaylistTrack } from '../models.js';
+import { GenerateRequest, GeneratedPlaylist, PlaylistSeed, ScoringParams } from '../models.js';
 import { CandidatePoolService } from '../recommender/candidate-pool.service.js';
 import { SpotifyApiService } from '../spotify/spotify-api.service.js';
 import { PlaylistLibraryService } from './playlist-library.service.js';
@@ -22,6 +22,7 @@ export class PlaylistService {
 
   async generate(session: Session, request: GenerateRequest): Promise<GeneratedPlaylist> {
     const startedAt = Date.now();
+    const params: ScoringParams = { ...DEFAULT_PARAMS, lambda: lambdaForVariety(request.variety) };
     const poolSize = Math.min(Math.max(request.length * 2, 30), 120);
     const pool = await this.pools.gather({
       seeds: request.seeds,
@@ -29,6 +30,7 @@ export class PlaylistService {
       wanted: poolSize,
       listeners: request.listeners,
       countries: request.countries,
+      walks: [params.hops === 2 ? 'twoHop' : 'oneHop'],
     });
     if (pool.artists.length === 0) {
       throw new UnprocessableEntityException(
@@ -38,11 +40,11 @@ export class PlaylistService {
       );
     }
 
-    const ranked = rankPool(pool, request.mode);
+    const ranked = rankPool(pool, params, request.mode);
     const buckets = this.#artistOrder(pool, ranked, request);
     const picks = await this.trackPicker.fill(session, buckets, { length: request.length });
     // Seeds take turns, so no seed's share is bunched up at the start or the end.
-    const tracks: PlaylistTrack[] = interleave(picks).map((pick) => pick.track);
+    const tracks = interleave(picks).map((pick) => pick.track);
     if (tracks.length === 0) {
       throw new UnprocessableEntityException('No tracks could be matched on Spotify for these seeds');
     }

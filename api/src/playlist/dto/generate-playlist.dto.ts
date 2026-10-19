@@ -18,6 +18,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { DEFAULT_VARIETY } from '../../engine/ranking.js';
 import type { GenerateRequest, ListenerFilter, MixMode, PlaylistSeed } from '../../models.js';
 
 const MAX_SEEDS = 10;
@@ -90,4 +91,9 @@ export class GeneratePlaylistDto implements GenerateRequest {
   @ArrayUnique()
   @Matches(COUNTRY_CODE, { each: true, message: 'each value in countries must be a two-letter country code' })
   countries: string[] = [];
+
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @Min(0)
+  @Max(1)
+  variety = DEFAULT_VARIETY;
 }
