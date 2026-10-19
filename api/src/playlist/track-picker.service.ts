@@ -8,8 +8,8 @@ import { LastfmApiService } from '../lastfm/lastfm-api.service.js';
 import { PlaylistTrack } from '../models.js';
 import { SpotifyApiService } from '../spotify/spotify-api.service.js';
 
-/** Last.fm's top tracks per artist to choose from: their hits. */
-const TOP_TRACKS = 10;
+/** Last.fm's top tracks per artist to choose from; the Deep-cuts setting decides how far down picks go. */
+const TOP_TRACKS = 50;
 /** Titles tried on Spotify per artist before giving up on them. */
 const TRACK_ATTEMPTS = 3;
 
@@ -28,12 +28,14 @@ export interface TrackPick {
 
 export interface FillOptions {
   length: number;
+  deepCuts: number;
 }
 
 /** What every lookup in one fill shares. */
 interface FillContext {
   session: Session;
   used: UsedSets;
+  deepCuts: number;
 }
 
 interface BucketState {
@@ -65,9 +67,13 @@ export class TrackPickerService {
   async fill(
     session: Session,
     buckets: readonly (readonly PickableArtist[])[],
-    { length }: FillOptions,
+    { length, deepCuts }: FillOptions,
   ): Promise<TrackPick[][]> {
-    const context: FillContext = { session, used: { artists: new Set(), uris: new Set(), songs: new Set() } };
+    const context: FillContext = {
+      session,
+      used: { artists: new Set(), uris: new Set(), songs: new Set() },
+      deepCuts,
+    };
     const states: BucketState[] = buckets.map((artists) => ({ artists, cursor: 0, picks: [] }));
     const shares = quotas(length, states.length);
     const missing = (): number => length - states.reduce((sum, state) => sum + state.picks.length, 0);
@@ -117,9 +123,9 @@ export class TrackPickerService {
     }
   }
 
-  /** One of the artist's top tracks that exists on Spotify and is not in the playlist yet. */
-  async #findTrack({ session, used }: FillContext, artist: PickableArtist): Promise<PlaylistTrack | null> {
-    const titles = orderTracks(await this.lastfm.artistTopTracks(artist.name, TOP_TRACKS));
+  /** One of the artist's top tracks (Deep-cuts weighted) that exists on Spotify and is not in the playlist yet. */
+  async #findTrack({ session, used, deepCuts }: FillContext, artist: PickableArtist): Promise<PlaylistTrack | null> {
+    const titles = orderTracks(await this.lastfm.artistTopTracks(artist.name, TOP_TRACKS), deepCuts);
     for (const title of titles.slice(0, TRACK_ATTEMPTS)) {
       const hits = await this.spotify.searchTracks(session, artist.name, title);
       const hit = findMatch(hits, artist.name, title);

@@ -40,6 +40,8 @@ export interface GenerateRequest {
   countries: string[];
   /** 0 = the closest artists only, 1 = as varied as possible (MMR). */
   variety: number;
+  /** 0 = mostly each artist's hits, 1 = anything from their top 50 tracks. */
+  deepCuts: number;
 }
 
 /**

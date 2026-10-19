@@ -3,6 +3,7 @@ import { AppConfig } from '../config.js';
 import { ApiCacheService, CachedLoader } from '../cache/api-cache.service.js';
 import { DAY_MS, RequestQueue, UpstreamError, request, toArray } from '../common/http.js';
 import { RawTag } from '../engine/tags.js';
+import { TopTrack } from '../engine/track-matching.js';
 import { GenreSeed } from '../models.js';
 
 const BASE_URL = 'https://ws.audioscrobbler.com/2.0/';
@@ -41,7 +42,7 @@ interface TagTopArtistsResponse {
 }
 
 interface TopTracksResponse {
-  toptracks?: { track?: Many<{ name: string }> };
+  toptracks?: { track?: Many<{ name: string; listeners?: number | string }> };
 }
 
 interface ArtistInfoResponse {
@@ -64,7 +65,7 @@ export class LastfmApiService {
   readonly #tags: CachedLoader<RawTag[]>;
   readonly #similar: CachedLoader<SimilarArtist[]>;
   readonly #tagArtists: CachedLoader<string[]>;
-  readonly #topTracks: CachedLoader<string[]>;
+  readonly #topTracks: CachedLoader<TopTrack[]>;
   readonly #info: CachedLoader<ArtistInfo | null>;
   readonly #tagInfo: CachedLoader<GenreSeed | null>;
 
@@ -75,7 +76,8 @@ export class LastfmApiService {
     this.#tags = cache.loader('lastfm:artist-tags', CACHE_TTL_MS);
     this.#similar = cache.loader('lastfm:similar', CACHE_TTL_MS);
     this.#tagArtists = cache.loader('lastfm:tag-artists', CACHE_TTL_MS);
-    this.#topTracks = cache.loader('lastfm:top-tracks', CACHE_TTL_MS);
+    // v2: entries became { title, listeners } instead of titles.
+    this.#topTracks = cache.loader('lastfm:top-tracks:v2', CACHE_TTL_MS);
     this.#info = cache.loader('lastfm:artist-info', CACHE_TTL_MS);
     this.#tagInfo = cache.loader('lastfm:tag-info', CACHE_TTL_MS);
   }
@@ -106,15 +108,18 @@ export class LastfmApiService {
     });
   }
 
-  /** Titles, most-listened first. */
-  artistTopTracks(artist: string, limit: number): Promise<string[]> {
+  /** Most-listened first, with how many people listened to each. */
+  artistTopTracks(artist: string, limit: number): Promise<TopTrack[]> {
     return this.#topTracks.get(key(artist, limit), async () => {
       const response = await this.#call<TopTracksResponse>('artist.getTopTracks', {
         artist,
         limit: String(limit),
         autocorrect: '1',
       });
-      return toArray(response?.toptracks?.track).map((track) => track.name);
+      return toArray(response?.toptracks?.track).map((track) => ({
+        title: track.name,
+        listeners: Number(track.listeners ?? 0),
+      }));
     });
   }
 

@@ -42,7 +42,7 @@ export class PlaylistService {
 
     const ranked = rankPool(pool, params, request.mode);
     const buckets = this.#artistOrder(pool, ranked, request);
-    const picks = await this.trackPicker.fill(session, buckets, { length: request.length });
+    const picks = await this.trackPicker.fill(session, buckets, { length: request.length, deepCuts: request.deepCuts });
     // Seeds take turns, so no seed's share is bunched up at the start or the end.
     const tracks = interleave(picks).map((pick) => pick.track);
     if (tracks.length === 0) {
