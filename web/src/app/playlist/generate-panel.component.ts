@@ -19,6 +19,8 @@ interface GenerateForm {
   includeSeedArtists: boolean;
   listeners: NumberRange;
   countries: string[];
+  variety: number;
+  deepCuts: number;
 }
 
 @Component({
@@ -53,6 +55,8 @@ export class GeneratePanelComponent {
     includeSeedArtists: true,
     listeners: { min: LISTENERS_FLOOR, max: LISTENERS_CEILING },
     countries: [],
+    variety: 0.25,
+    deepCuts: 0.3,
   });
 
   protected readonly optionsForm = form(this.options, (path) => {
@@ -63,6 +67,11 @@ export class GeneratePanelComponent {
     maxLength(path.countries, MAX_COUNTRIES, {
       message: `Pick at most ${MAX_COUNTRIES} countries`,
     });
+    // Also become the range inputs' min and max attributes.
+    for (const slider of [path.variety, path.deepCuts]) {
+      min(slider, 0);
+      max(slider, 1);
+    }
   });
 
   protected submit(): void {

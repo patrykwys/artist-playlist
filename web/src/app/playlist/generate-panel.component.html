@@ -38,6 +38,20 @@
     <app-country-select [formField]="optionsForm.countries" />
   </div>
 
+  <div class="sliders">
+    <label class="field">
+      <span class="field-label">Variety</span>
+      <input type="range" step="0.05" [formField]="optionsForm.variety" />
+      <span class="slider-ends" aria-hidden="true"><span>Closest matches</span><span>Wide range</span></span>
+    </label>
+
+    <label class="field">
+      <span class="field-label">Deep cuts</span>
+      <input type="range" step="0.05" [formField]="optionsForm.deepCuts" />
+      <span class="slider-ends" aria-hidden="true"><span>Hits</span><span>Deep cuts</span></span>
+    </label>
+  </div>
+
   <label class="check">
     <input type="checkbox" [formField]="optionsForm.includeSeedArtists" />
     Include tracks by the seed artists
