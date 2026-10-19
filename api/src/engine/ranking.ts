@@ -12,12 +12,13 @@ export function lambdaForVariety(variety: number): number {
   return 1 - 0.6 * variety;
 }
 
-/** λ 0.85: a mild nudge away from near-duplicates. */
+/** λ 0.85: a mild nudge away from near-duplicates. Not measured yet; the lab reports what it costs. */
 export const DEFAULT_VARIETY = 0.25;
 
 /**
- * Starting weights from the design (algorithm.md), not yet tuned. λ here is the default Variety; generating a
- * playlist replaces it with the slider's value.
+ * Starting weights from the design (algorithm.md), not yet tuned: replace them with the lab's cross-validated
+ * recommendation once a run says "better". λ here is the default Variety; generating a playlist replaces it
+ * with the slider's value, and the harness scores relevance at λ = 1.
  */
 export const DEFAULT_PARAMS: ScoringParams = {
   walk: 0.5,
