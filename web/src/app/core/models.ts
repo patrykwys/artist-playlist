@@ -37,6 +37,10 @@ export interface PlaylistOptions {
   listeners: ListenerFilter | null;
   /** ISO 3166-1 alpha-2 codes (['PL', 'IE']); artists must come from one of them. [] = any country. */
   countries: string[];
+  /** 0 = the closest artists only, 1 = as varied as possible. */
+  variety: number;
+  /** 0 = mostly each artist's hits, 1 = anything from their top 50 tracks. */
+  deepCuts: number;
 }
 
 export interface GenerateRequest extends PlaylistOptions {

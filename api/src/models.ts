@@ -38,6 +38,26 @@ export interface GenerateRequest {
   listeners: ListenerFilter | null;
   /** ISO 3166-1 alpha-2 codes ('PL'); artists must come from one of them. Empty = any country. */
   countries: string[];
+  /** 0 = the closest artists only, 1 = as varied as possible (MMR). */
+  variety: number;
+  /** 0 = mostly each artist's hits, 1 = anything from their top 50 tracks. */
+  deepCuts: number;
+}
+
+/**
+ * The knobs of the ranking formula:
+ * relevance = walk · walkScore + tags · tagCosine − popularity · popularityGap, then MMR with `lambda`.
+ */
+export interface ScoringParams {
+  walk: number;
+  tags: number;
+  popularity: number;
+  /** 1 = rank by relevance alone; lower values trade relevance for variety. */
+  lambda: number;
+  /** 1 = Last.fm's similar artists only; 2 = also their similar artists. */
+  hops: 1 | 2;
+  /** Weigh tags by rarity (TF-IDF) instead of counting every tag the same. */
+  tfidf: boolean;
 }
 
 export interface PlaylistTrack {

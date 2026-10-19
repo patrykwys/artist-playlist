@@ -47,3 +47,27 @@
     grid-template-columns: 1fr;
   }
 }
+
+.sliders {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+
+  input[type='range'] {
+    width: 100%;
+    accent-color: var(--accent);
+  }
+}
+
+.slider-ends {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .sliders {
+    grid-template-columns: 1fr;
+  }
+}

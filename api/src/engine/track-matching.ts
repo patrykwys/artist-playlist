@@ -1,3 +1,5 @@
+import { weightedShuffle } from './random.js';
+
 export interface SpotifyTrackHit {
   uri: string;
   name: string;
@@ -15,7 +17,7 @@ export function normalizeName(value: string): string {
   return value
     .toLowerCase()
     .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[([](?:feat|ft|with)\.?\s[^)\]]*[)\]]/g, ' ')
     .replace(new RegExp(`[([][^)\\]]*\\b(?:${VERSION_WORDS})\\b[^)\\]]*[)\\]]`, 'g'), ' ')
     .replace(new RegExp(`\\s-\\s.*\\b(?:${VERSION_WORDS})\\b.*$`), ' ')
@@ -36,15 +38,34 @@ export function findMatch(hits: readonly SpotifyTrackHit[], artist: string, titl
   );
 }
 
-/** An artist's top tracks in Last.fm's order (most played first), without intros, skits and duplicate titles. */
-export function orderTracks(titles: readonly string[]): string[] {
+/** One of an artist's top tracks on Last.fm. */
+export interface TopTrack {
+  title: string;
+  listeners: number;
+}
+
+/** The Deep-cuts slider maps 0…1 onto α 2…0.4 in weight = listeners^α. */
+export function deepCutsExponent(deepCuts: number): number {
+  return 2 - 1.6 * deepCuts;
+}
+
+/**
+ * Weighted shuffle of an artist's top tracks, so reruns differ: weight = listeners^α (`deepCutsExponent`).
+ * At 0 the big hits nearly always come first; at 1 a track a tenth as popular often does.
+ * Intros, skits and duplicate titles are dropped.
+ */
+export function orderTracks(tracks: readonly TopTrack[], deepCuts: number, random: () => number = Math.random): string[] {
   const seen = new Set<string>();
-  return titles.filter((title) => {
-    const key = normalizeName(title);
-    if (SKIP_TITLE.test(title) || !key || seen.has(key)) {
+  const playable = tracks.filter((track) => {
+    const key = normalizeName(track.title);
+    if (SKIP_TITLE.test(track.title) || !key || seen.has(key)) {
       return false;
     }
     seen.add(key);
     return true;
   });
+  const exponent = deepCutsExponent(deepCuts);
+  return weightedShuffle(playable, (track) => Math.pow(Math.max(track.listeners, 1), exponent), random).map(
+    (track) => track.title,
+  );
 }
