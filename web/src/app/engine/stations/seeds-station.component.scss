@@ -1,0 +1,92 @@
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.seed {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-left: 4px solid oklch(65% 0.16 var(--hue));
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.seed-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.seed-name {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.seed-meta,
+.wikidata,
+.reading {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.reading {
+  animation: engine-breathe 1.4s ease-in-out infinite;
+}
+
+.tags {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 54px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.tag-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag-bar {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--border);
+}
+
+.tag-fill {
+  display: block;
+  width: calc(var(--v) * 100%);
+  height: 100%;
+  border-radius: inherit;
+  background: oklch(65% 0.16 var(--hue));
+  transform-origin: left;
+  animation: grow 700ms ease-out;
+}
+
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reading,
+  .tag-fill {
+    animation: none;
+  }
+}

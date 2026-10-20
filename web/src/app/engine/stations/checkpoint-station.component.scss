@@ -1,0 +1,232 @@
+.gate {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--bg), var(--surface));
+  transition: border-color 200ms;
+}
+
+.gate[data-verdict='pass'] {
+  border-color: var(--good);
+}
+
+.gate[data-verdict]:not([data-verdict='pass']) {
+  border-color: var(--danger);
+}
+
+.slot {
+  display: grid;
+  place-items: center;
+  min-height: 52px;
+}
+
+.token {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 6px 16px 6px 6px;
+  border: 1px solid oklch(70% 0.12 var(--hue) / 0.6);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.08);
+}
+
+.token .engine-disc {
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+}
+
+.token-text {
+  display: grid;
+  min-width: 0;
+}
+
+.token-name {
+  overflow: hidden;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.token-meta {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.lights {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.light {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 11px;
+  transition:
+    background 200ms,
+    color 200ms,
+    border-color 200ms;
+}
+
+.light-mark {
+  font-weight: 700;
+}
+
+.light[data-light='off'] {
+  opacity: 0.45;
+}
+
+.light[data-light='skip'] {
+  opacity: 0.6;
+}
+
+.light[data-light='pass'] {
+  border-color: var(--good);
+  background: color-mix(in oklch, var(--good) 15%, transparent);
+  color: var(--good);
+}
+
+.light[data-light='fail'] {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+  animation: flash 500ms ease-out;
+}
+
+.reason {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.reason[data-verdict='pass'] {
+  color: var(--good);
+}
+
+.reason[data-verdict]:not([data-verdict='pass']) {
+  color: var(--danger);
+}
+
+.bins {
+  display: grid;
+  flex: 1;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+}
+
+.bin {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.bin-pass {
+  border-color: color-mix(in oklch, var(--good) 45%, var(--border));
+}
+
+.bin-fail {
+  border-color: color-mix(in oklch, var(--danger) 35%, var(--border));
+}
+
+.bin-head {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.bin-pass .bin-head {
+  color: var(--good);
+}
+
+.bin-fail .bin-head {
+  color: var(--danger);
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+}
+
+.bin-body {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 4px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.tallies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 6px;
+}
+
+.tally {
+  padding: 0 6px;
+  border-radius: 5px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 11px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 120px;
+  overflow: hidden;
+  padding: 2px 7px 2px 2px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip[data-ranked='true'] {
+  border-color: oklch(70% 0.12 var(--hue) / 0.7);
+}
+
+.chip-rejected {
+  opacity: 0.7;
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in oklch, var(--danger) 60%, transparent);
+}
+
+@keyframes flash {
+  from {
+    transform: scale(1.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .light[data-light='fail'] {
+    animation: none;
+  }
+}
