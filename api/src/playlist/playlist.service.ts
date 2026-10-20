@@ -70,6 +70,7 @@ export class PlaylistService {
       length: request.length,
       deepCuts: request.deepCuts,
       fit,
+      releaseYears: request.releaseYears,
       blockedArtists: request.blockedArtists,
     });
     // The same rarity weighting the ranking used, for the reasons and the running order.
@@ -82,7 +83,11 @@ export class PlaylistService {
       ({ pick, why }): GeneratedTrack => ({ ...pick.track, why }),
     );
     if (tracks.length === 0) {
-      throw new UnprocessableEntityException('No tracks could be matched on Spotify for these seeds');
+      throw new UnprocessableEntityException(
+        request.releaseYears
+          ? 'No tracks from those years could be found on Spotify for these seeds. Try a wider year range.'
+          : 'No tracks could be matched on Spotify for these seeds',
+      );
     }
 
     const name = request.name.trim() || defaultName(request.seeds);

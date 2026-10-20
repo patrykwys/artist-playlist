@@ -6,10 +6,16 @@ export interface SpotifyTrackHit {
   artists: string[];
   durationMs: number;
   imageUrl: string | null;
+  /** The year its album came out; null when Spotify doesn't know. */
+  releaseYear: number | null;
 }
 
-/** Intros, outros, interludes and skits make poor playlist tracks. */
 const SKIP_TITLE = /\b(intro|outro|interlude|skit)\b/i;
+
+/** Intros, outros, interludes and skits make poor playlist tracks. */
+export function isFillerTitle(title: string): boolean {
+  return SKIP_TITLE.test(title);
+}
 const VERSION_WORDS = 'remaster(?:ed)?|mono|stereo|radio edit|single version|album version|explicit|clean';
 
 /** Lowercase, no accents or punctuation, without "(feat. …)" and remaster/version suffixes. */

@@ -3,9 +3,16 @@ import type { Session } from '../auth/session.service.js';
 import { Score } from '../engine/ranking.js';
 import { artistKey, quotas } from '../engine/scoring.js';
 import { TagMap } from '../engine/tags.js';
-import { SpotifyTrackHit, TrackChoice, chooseTracks, findMatch, normalizeName } from '../engine/track-matching.js';
+import {
+  SpotifyTrackHit,
+  TrackChoice,
+  chooseTracks,
+  findMatch,
+  isFillerTitle,
+  normalizeName,
+} from '../engine/track-matching.js';
 import { LastfmApiService } from '../lastfm/lastfm-api.service.js';
-import { PlaylistTrack } from '../models.js';
+import { PlaylistTrack, YearRange } from '../models.js';
 import { SpotifyApiService } from '../spotify/spotify-api.service.js';
 import { TOP_TRACKS, TrackFit } from './track-fit.service.js';
 
@@ -31,6 +38,8 @@ export interface FillOptions {
   length: number;
   deepCuts: number;
   fit?: TrackFit;
+  /** Only tracks whose album came out in these years; null = any year. */
+  releaseYears?: YearRange | null;
   /** Artists whose tracks are never used, features included. */
   blockedArtists?: readonly string[];
 }
@@ -41,8 +50,11 @@ interface FillContext {
   used: UsedSets;
   deepCuts: number;
   fit: TrackFit;
+  releaseYears: YearRange | null;
   /** Artist keys. */
   blocked: ReadonlySet<string>;
+  /** Artist key → their tracks from the release years: searched once, also for a second track. */
+  inYears: Map<string, Promise<SpotifyTrackHit[]>>;
 }
 
 interface Found {
@@ -80,14 +92,16 @@ export class TrackPickerService {
   async fill(
     session: Session,
     buckets: readonly (readonly PickableArtist[])[],
-    { length, deepCuts, fit = new Map(), blockedArtists = [] }: FillOptions,
+    { length, deepCuts, fit = new Map(), releaseYears = null, blockedArtists = [] }: FillOptions,
   ): Promise<TrackPick[][]> {
     const context: FillContext = {
       session,
       used: { artists: new Set(), uris: new Set(), songs: new Set() },
       deepCuts,
       fit,
+      releaseYears,
       blocked: new Set(blockedArtists.map(artistKey)),
+      inYears: new Map(),
     };
     const states: BucketState[] = buckets.map((artists) => ({ artists, cursor: 0, picks: [] }));
     const shares = quotas(length, states.length);
@@ -140,11 +154,14 @@ export class TrackPickerService {
   /**
    * A song by the artist that exists on Spotify, is not in the playlist yet and credits no blocked artist:
    * one that fits a seed song when Last.fm knows one (see TrackFitService), otherwise one of their top tracks.
+   * With release years set, only their songs from those years count.
    */
   async #findTrack(context: FillContext, artist: PickableArtist): Promise<Omit<TrackPick, 'artist'> | null> {
     const topTracks = await this.lastfm.artistTopTracks(artist.name, TOP_TRACKS);
     const choices = chooseTracks(topTracks, context.fit.get(artist.key) ?? [], context.deepCuts);
-    const found = await this.#findByTitle(context, artist, choices);
+    const found = context.releaseYears
+      ? await this.#findInYears(context, artist, choices, context.releaseYears)
+      : await this.#findByTitle(context, artist, choices);
     if (!found) {
       return null;
     }
@@ -173,6 +190,44 @@ export class TrackPickerService {
     }
     return null;
   }
+
+  /**
+   * One search for the artist's tracks from those years, then the best choice among them. When none of the
+   * choices came out then (Last.fm's top tracks lean on the hits), Spotify's top track from those years.
+   * Years are album years, so a song also counts in the year a compilation or remaster of it came out.
+   */
+  async #findInYears(
+    context: FillContext,
+    artist: PickableArtist,
+    choices: TrackChoice[],
+    years: YearRange,
+  ): Promise<Found | null> {
+    const hits = (await this.#tracksInYears(context, artist, years)).filter((hit) => isUsable(context, artist, hit));
+    for (const { title, similarTo } of choices) {
+      const hit = findMatch(hits, artist.name, title);
+      if (hit) {
+        return { hit, similarTo };
+      }
+    }
+    const name = normalizeName(artist.name);
+    const hit = hits.find(
+      (track) => !isFillerTitle(track.name) && track.artists.some((credit) => normalizeName(credit) === name),
+    );
+    return hit ? { hit, similarTo: null } : null;
+  }
+
+  #tracksInYears(context: FillContext, artist: PickableArtist, years: YearRange): Promise<SpotifyTrackHit[]> {
+    const cached = context.inYears.get(artist.key);
+    if (cached) {
+      return cached;
+    }
+    // Spotify's year filter is the album's year too; checked again here in case it lets something through.
+    const hits = this.spotify
+      .searchTracksInYears(context.session, artist.name, years)
+      .then((found) => found.filter((hit) => hit.releaseYear !== null && withinYears(hit.releaseYear, years)));
+    context.inYears.set(artist.key, hits);
+    return hits;
+  }
 }
 
 /** Not in the playlist yet (in any release) and crediting no blocked artist. */
@@ -186,4 +241,8 @@ function isUsable({ used, blocked }: FillContext, artist: PickableArtist, hit: S
 
 function songKey(artist: PickableArtist, title: string): string {
   return `${artist.key}|${normalizeName(title)}`;
+}
+
+function withinYears(year: number, { min, max }: YearRange): boolean {
+  return (min === null || year >= min) && (max === null || year <= max);
 }
