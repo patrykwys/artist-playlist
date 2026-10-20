@@ -3,13 +3,12 @@ import type { Session } from '../auth/session.service.js';
 import { Score } from '../engine/ranking.js';
 import { quotas } from '../engine/scoring.js';
 import { TagMap } from '../engine/tags.js';
-import { findMatch, normalizeName, orderTracks } from '../engine/track-matching.js';
+import { SpotifyTrackHit, TrackChoice, chooseTracks, findMatch, normalizeName } from '../engine/track-matching.js';
 import { LastfmApiService } from '../lastfm/lastfm-api.service.js';
 import { PlaylistTrack } from '../models.js';
 import { SpotifyApiService } from '../spotify/spotify-api.service.js';
+import { TOP_TRACKS, TrackFit } from './track-fit.service.js';
 
-/** Last.fm's top tracks per artist to choose from; the Deep-cuts setting decides how far down picks go. */
-const TOP_TRACKS = 50;
 /** Titles tried on Spotify per artist before giving up on them. */
 const TRACK_ATTEMPTS = 3;
 
@@ -24,11 +23,14 @@ export interface PickableArtist {
 export interface TrackPick {
   track: PlaylistTrack;
   artist: PickableArtist;
+  /** The seed song this one was chosen to fit, "Artist – Title"; null for one of the artist's top tracks. */
+  similarTo: string | null;
 }
 
 export interface FillOptions {
   length: number;
   deepCuts: number;
+  fit?: TrackFit;
 }
 
 /** What every lookup in one fill shares. */
@@ -36,9 +38,16 @@ interface FillContext {
   session: Session;
   used: UsedSets;
   deepCuts: number;
+  fit: TrackFit;
+}
+
+interface Found {
+  hit: SpotifyTrackHit;
+  similarTo: string | null;
 }
 
 interface BucketState {
+
   artists: readonly PickableArtist[];
   cursor: number;
   picks: TrackPick[];
@@ -67,17 +76,17 @@ export class TrackPickerService {
   async fill(
     session: Session,
     buckets: readonly (readonly PickableArtist[])[],
-    { length, deepCuts }: FillOptions,
+    { length, deepCuts, fit = new Map() }: FillOptions,
   ): Promise<TrackPick[][]> {
     const context: FillContext = {
       session,
       used: { artists: new Set(), uris: new Set(), songs: new Set() },
       deepCuts,
+      fit,
     };
     const states: BucketState[] = buckets.map((artists) => ({ artists, cursor: 0, picks: [] }));
     const shares = quotas(length, states.length);
     const missing = (): number => length - states.reduce((sum, state) => sum + state.picks.length, 0);
-
     await Promise.all(states.map((state, index) => this.#fillBucket(context, state, shares.at(index) ?? 0)));
 
     for (const state of states) {
@@ -91,9 +100,9 @@ export class TrackPickerService {
         if (missing() <= 0) {
           break;
         }
-        const track = await this.#findTrack(context, pick.artist);
-        if (track) {
-          state.picks.push({ track, artist: pick.artist });
+        const found = await this.#findTrack(context, pick.artist);
+        if (found) {
+          state.picks.push({ ...found, artist: pick.artist });
         }
       }
     }
@@ -114,35 +123,56 @@ export class TrackPickerService {
       }
 
       const found = await Promise.all(batch.map((artist) => this.#findTrack(context, artist)));
-      found.forEach((track, index) => {
+      found.forEach((pick, index) => {
         const artist = batch.at(index);
-        if (artist && track && state.picks.length < target) {
-          state.picks.push({ track, artist });
+        if (artist && pick && state.picks.length < target) {
+          state.picks.push({ ...pick, artist });
         }
       });
     }
   }
 
-  /** One of the artist's top tracks (Deep-cuts weighted) that exists on Spotify and is not in the playlist yet. */
-  async #findTrack({ session, used, deepCuts }: FillContext, artist: PickableArtist): Promise<PlaylistTrack | null> {
-    const titles = orderTracks(await this.lastfm.artistTopTracks(artist.name, TOP_TRACKS), deepCuts);
-    for (const title of titles.slice(0, TRACK_ATTEMPTS)) {
-      const hits = await this.spotify.searchTracks(session, artist.name, title);
+  /**
+   * A song by the artist that exists on Spotify and is not in the playlist yet: one that fits a seed song when
+   * Last.fm knows one (see TrackFitService), otherwise one of their top tracks.
+   */
+  async #findTrack(context: FillContext, artist: PickableArtist): Promise<Omit<TrackPick, 'artist'> | null> {
+    const topTracks = await this.lastfm.artistTopTracks(artist.name, TOP_TRACKS);
+    const choices = chooseTracks(topTracks, context.fit.get(artist.key) ?? [], context.deepCuts);
+    const found = await this.#findByTitle(context, artist, choices);
+    if (!found) {
+      return null;
+    }
+
+    const { hit, similarTo } = found;
+    context.used.uris.add(hit.uri);
+    context.used.songs.add(songKey(artist, hit.name));
+    const track: PlaylistTrack = {
+      uri: hit.uri,
+      title: hit.name,
+      artist: hit.artists.at(0) ?? artist.name,
+      durationMs: hit.durationMs,
+      imageUrl: hit.imageUrl,
+    };
+    return { track, similarTo };
+  }
+
+  /** The first of the best few choices that Spotify has. */
+  async #findByTitle(context: FillContext, artist: PickableArtist, choices: TrackChoice[]): Promise<Found | null> {
+    for (const { title, similarTo } of choices.slice(0, TRACK_ATTEMPTS)) {
+      const hits = await this.spotify.searchTracks(context.session, artist.name, title);
       const hit = findMatch(hits, artist.name, title);
-      if (hit && !used.uris.has(hit.uri) && !used.songs.has(songKey(artist, hit.name))) {
-        used.uris.add(hit.uri);
-        used.songs.add(songKey(artist, hit.name));
-        return {
-          uri: hit.uri,
-          title: hit.name,
-          artist: hit.artists.at(0) ?? artist.name,
-          durationMs: hit.durationMs,
-          imageUrl: hit.imageUrl,
-        };
+      if (hit && isUsable(context, artist, hit)) {
+        return { hit, similarTo };
       }
     }
     return null;
   }
+}
+
+/** Not in the playlist yet, in any release. */
+function isUsable({ used }: FillContext, artist: PickableArtist, hit: SpotifyTrackHit): boolean {
+  return !used.uris.has(hit.uri) && !used.songs.has(songKey(artist, hit.name));
 }
 
 function songKey(artist: PickableArtist, title: string): string {

@@ -10,6 +10,7 @@ import { CandidatePoolService } from '../recommender/candidate-pool.service.js';
 import { SpotifyApiService } from '../spotify/spotify-api.service.js';
 import { PlaylistLibraryService } from './playlist-library.service.js';
 import { buildDescription } from './playlist-description.js';
+import { TrackFitService } from './track-fit.service.js';
 import { PickableArtist, TrackPick, TrackPickerService } from './track-picker.service.js';
 
 @Injectable()
@@ -19,6 +20,7 @@ export class PlaylistService {
   constructor(
     private readonly pools: CandidatePoolService,
     private readonly trackPicker: TrackPickerService,
+    private readonly trackFit: TrackFitService,
     private readonly spotify: SpotifyApiService,
     private readonly library: PlaylistLibraryService,
   ) {}
@@ -27,14 +29,17 @@ export class PlaylistService {
     const startedAt = Date.now();
     const params: ScoringParams = { ...DEFAULT_PARAMS, lambda: lambdaForVariety(request.variety) };
     const poolSize = Math.min(Math.max(request.length * 2, 30), 120);
-    const pool = await this.pools.gather({
-      seeds: request.seeds,
-      perSeed: Math.ceil(poolSize / request.seeds.length),
-      wanted: poolSize,
-      listeners: request.listeners,
-      countries: request.countries,
-      walks: [params.hops === 2 ? 'twoHop' : 'oneHop'],
-    });
+    const [pool, fit] = await Promise.all([
+      this.pools.gather({
+        seeds: request.seeds,
+        perSeed: Math.ceil(poolSize / request.seeds.length),
+        wanted: poolSize,
+        listeners: request.listeners,
+        countries: request.countries,
+        walks: [params.hops === 2 ? 'twoHop' : 'oneHop'],
+      }),
+      this.trackFit.forSeeds(request.seeds),
+    ]);
     if (pool.artists.length === 0) {
       throw new UnprocessableEntityException(
         request.listeners || request.countries.length > 0
@@ -45,10 +50,15 @@ export class PlaylistService {
 
     const ranked = rankPool(pool, params, request.mode);
     const buckets = this.#artistOrder(pool, ranked, request);
-    const picks = await this.trackPicker.fill(session, buckets, { length: request.length, deepCuts: request.deepCuts });
+    const picks = await this.trackPicker.fill(session, buckets, {
+      length: request.length,
+      deepCuts: request.deepCuts,
+      fit,
+    });
     // The same rarity weighting the ranking used, for the running order.
     const weigh = params.tfidf ? tfidf(pool.artists.map((artist) => artist.tags)) : unweighted;
-    const tracks = this.#flow(weigh, interleave(picks)).map((pick) => pick.track);
+    const ordered = this.#flow(weigh, interleave(picks));
+    const tracks = ordered.map((pick) => pick.track);
     if (tracks.length === 0) {
       throw new UnprocessableEntityException('No tracks could be matched on Spotify for these seeds');
     }
@@ -60,9 +70,10 @@ export class PlaylistService {
       playlist.id,
       tracks.map((track) => track.uri),
     );
+    const fitting = ordered.filter((pick) => pick.similarTo).length;
     this.logger.log(
-      `Created "${name}": ${tracks.length}/${request.length} tracks from ${pool.artists.length} candidates ` +
-        `in ${Date.now() - startedAt} ms`,
+      `Created "${name}": ${tracks.length}/${request.length} tracks from ${pool.artists.length} candidates, ` +
+        `${fitting} chosen to fit a seed song, in ${Date.now() - startedAt} ms`,
     );
 
     const result: GeneratedPlaylist = {

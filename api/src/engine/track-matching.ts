@@ -69,3 +69,50 @@ export function orderTracks(tracks: readonly TopTrack[], deepCuts: number, rando
     (track) => track.title,
   );
 }
+
+/** One of an artist's songs that listeners of a seed's song also play (Last.fm track.getSimilar). */
+export interface FittingTrack {
+  title: string;
+  match: number;
+  /** The seed song it was found from, "Artist – Title". */
+  similarTo: string;
+}
+
+export interface TrackChoice {
+  title: string;
+  /** Set when the title was chosen because it fits a seed song. */
+  similarTo: string | null;
+}
+
+/** Fitting songs tried before the top tracks; capped so an artist whose fits aren't on Spotify still gets a hit. */
+export const MAX_FITTING_TRIES = 2;
+
+/**
+ * Titles to try on Spotify for one artist, best first. Songs the seeds' listeners also play come first,
+ * shuffled by how strongly (they are the artist's songs that suit this mix, hit or deep cut); then the
+ * artist's top tracks as `orderTracks` arranges them. No title twice.
+ */
+export function chooseTracks(
+  topTracks: readonly TopTrack[],
+  fitting: readonly FittingTrack[],
+  deepCuts: number,
+  random: () => number = Math.random,
+): TrackChoice[] {
+  const seen = new Set<string>();
+  const isNew = (title: string): boolean => {
+    const key = normalizeName(title);
+    if (!key || SKIP_TITLE.test(title) || seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  };
+  const fits = weightedShuffle(fitting, (track) => track.match, random)
+    .filter((track) => isNew(track.title))
+    .slice(0, MAX_FITTING_TRIES)
+    .map((track): TrackChoice => ({ title: track.title, similarTo: track.similarTo }));
+  const rest = orderTracks(topTracks, deepCuts, random)
+    .filter(isNew)
+    .map((title): TrackChoice => ({ title, similarTo: null }));
+  return [...fits, ...rest];
+}

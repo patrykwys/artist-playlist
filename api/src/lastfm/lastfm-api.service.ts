@@ -16,6 +16,13 @@ export interface SimilarArtist {
   match: number;
 }
 
+/** A song Last.fm listeners play alongside another one (track.getSimilar), 0 < match ≤ 1. */
+export interface SimilarTrack {
+  title: string;
+  artist: string;
+  match: number;
+}
+
 export interface ArtistInfo {
   name: string;
   mbid: string | null;
@@ -45,6 +52,10 @@ interface TopTracksResponse {
   toptracks?: { track?: Many<{ name: string; listeners?: number | string }> };
 }
 
+interface SimilarTracksResponse {
+  similartracks?: { track?: Many<{ name: string; match: number | string; artist?: { name?: string } }> };
+}
+
 interface ArtistInfoResponse {
   artist?: { name: string; mbid?: string; stats?: { listeners?: number | string } };
 }
@@ -66,6 +77,7 @@ export class LastfmApiService {
   readonly #similar: CachedLoader<SimilarArtist[]>;
   readonly #tagArtists: CachedLoader<string[]>;
   readonly #topTracks: CachedLoader<TopTrack[]>;
+  readonly #similarTracks: CachedLoader<SimilarTrack[]>;
   readonly #info: CachedLoader<ArtistInfo | null>;
   readonly #tagInfo: CachedLoader<GenreSeed | null>;
 
@@ -78,6 +90,7 @@ export class LastfmApiService {
     this.#tagArtists = cache.loader('lastfm:tag-artists', CACHE_TTL_MS);
     // v2: entries became { title, listeners } instead of titles.
     this.#topTracks = cache.loader('lastfm:top-tracks:v2', CACHE_TTL_MS);
+    this.#similarTracks = cache.loader('lastfm:similar-tracks', CACHE_TTL_MS);
     this.#info = cache.loader('lastfm:artist-info', CACHE_TTL_MS);
     this.#tagInfo = cache.loader('lastfm:tag-info', CACHE_TTL_MS);
   }
@@ -120,6 +133,21 @@ export class LastfmApiService {
         title: track.name,
         listeners: Number(track.listeners ?? 0),
       }));
+    });
+  }
+
+  /** Songs by any artist that listeners of this one also play, closest first (listening data, not tags). */
+  similarTracks(artist: string, track: string, limit: number): Promise<SimilarTrack[]> {
+    return this.#similarTracks.get(`${key(artist)}${key(track, limit)}`, async () => {
+      const response = await this.#call<SimilarTracksResponse>('track.getSimilar', {
+        artist,
+        track,
+        limit: String(limit),
+        autocorrect: '1',
+      });
+      return toArray(response?.similartracks?.track).flatMap((item) =>
+        item.artist?.name ? [{ title: item.name, artist: item.artist.name, match: Number(item.match) }] : [],
+      );
     });
   }
 
