@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { gunzipSync, gzipSync } from 'node:zlib';
 import type { Session } from '../auth/session.service.js';
 import { UserRepository } from '../auth/user.repository.js';
-import { GeneratedPlaylist, GeneratedTrack, PlaylistSeed, PlaylistTrack, TrackReason } from '../models.js';
+import { GeneratedPlaylist, GeneratedTrack, PlaylistSeed, PlaylistTrack, TraceEvent, TrackReason } from '../models.js';
 import { PlaylistEntry, SpotifyApiService } from '../spotify/spotify-api.service.js';
 import { isMadeByApp, parseDescription } from './playlist-description.js';
 import { PlaylistRepository, PlaylistRow, PlaylistTrackReasonRow, PlaylistTrackRow } from './playlist.repository.js';
@@ -26,10 +27,29 @@ export class PlaylistLibraryService {
     }
     const tracks = groupTracks(this.playlists.findTracksByUser(session.userId));
     const reasons = indexReasons(this.playlists.findReasonsByUser(session.userId));
-    return this.playlists.findByUser(session.userId).map((row) => {
-      const reasonOf = (uri: string): TrackReason | null => reasons.get(reasonKey(row.id, uri)) ?? null;
-      return toModel(row, tracks.get(row.id) ?? [], reasonOf);
-    });
+    const traced = new Set(this.playlists.findTracedIdsByUser(session.userId));
+    return this.playlists
+      .findByUser(session.userId)
+      .map((row) => {
+        const reasonOf = (uri: string): TrackReason | null => reasons.get(reasonKey(row.id, uri)) ?? null;
+        return toModel(row, tracks.get(row.id) ?? [], reasonOf, traced.has(row.id));
+      });
+  }
+
+  /** The recorded generation of one of your playlists, for the Engine view to replay. */
+  trace(session: Session, playlistId: string): TraceEvent[] {
+    const row = this.playlists.findTrace(session.userId, playlistId);
+    if (!row) {
+      throw new NotFoundException('No recording of how this playlist was made');
+    }
+    return JSON.parse(gunzipSync(row.events).toString('utf8'));
+  }
+
+  /** Keeps the trace of a playlist just generated (gzipped: JSON of repeated names shrinks about tenfold). */
+  saveTrace(playlistId: string, events: TraceEvent[]): void {
+    const compressed = gzipSync(JSON.stringify(events));
+    this.playlists.saveTrace({ playlist_id: playlistId, events: compressed, created_at: new Date().toISOString() });
+    this.logger.log(`Kept the trace of ${playlistId}: ${events.length} events, ${Math.round(compressed.length / 1024)} kB`);
   }
 
   /**
@@ -118,6 +138,7 @@ function toModel(
   row: PlaylistRow,
   trackRows: PlaylistTrackRow[],
   reasonOf: (uri: string) => TrackReason | null,
+  hasTrace: boolean,
 ): GeneratedPlaylist {
   const tracks = trackRows.map(
     (track): GeneratedTrack => ({
@@ -139,6 +160,7 @@ function toModel(
     seeds: parseSeeds(row.seeds),
     durationMs: tracks.reduce((total, track) => total + track.durationMs, 0),
     tracks,
+    hasTrace,
   };
 }
 

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpException, Logger, Post, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpException, Logger, Param, Post, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { CurrentSession, SessionGuard } from '../auth/session.guard.js';
 import type { Session } from '../auth/session.service.js';
@@ -31,6 +31,12 @@ export class PlaylistController {
     return this.library.list(session);
   }
 
+  /** How one of your playlists was made, recorded when it was generated: the Engine view replays it. */
+  @Get(':id/trace')
+  trace(@CurrentSession() session: Session, @Param('id') id: string): TraceEvent[] {
+    return this.library.trace(session, id);
+  }
+
   @Post()
   generate(@CurrentSession() session: Session, @Body() request: GeneratePlaylistDto): Promise<GeneratedPlaylist> {
     return this.playlistService.generate(session, request);
@@ -39,7 +45,8 @@ export class PlaylistController {
   /**
    * Generates like POST /playlists, but streams what the engine does as it happens: one TraceEvent per line
    * (NDJSON), ending with `done` or `error`. Errors travel in the stream because the 200 has already gone out.
-   * Validation and the session guard still answer with a plain status before anything is streamed.
+   * Validation and the session guard still answer with a plain status before anything is streamed. A saved
+   * playlist keeps the recording (GET /playlists/:id/trace); a dry run saves nothing.
    */
   @Post('trace')
   async generateTraced(
@@ -55,7 +62,7 @@ export class PlaylistController {
       }
     };
     try {
-      const playlist = await this.playlistService.generate(session, request, { emit });
+      const playlist = await this.playlistService.generateRecorded(session, request, { emit });
       emit({ type: 'done', playlist });
     } catch (error) {
       emit({ type: 'error', ...this.#describe(error) });

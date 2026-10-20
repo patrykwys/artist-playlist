@@ -201,6 +201,8 @@ export interface GeneratedPlaylist {
   seeds: PlaylistSeed[];
   durationMs: number;
   tracks: GeneratedTrack[];
+  /** Whether the run that made it was recorded, so the Engine view can replay it. */
+  hasTrace: boolean;
 }
 
 export interface SpotifyUser {

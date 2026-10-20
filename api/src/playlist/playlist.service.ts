@@ -50,6 +50,35 @@ export class PlaylistService {
     private readonly library: PlaylistLibraryService,
   ) {}
 
+  /**
+   * Generates while `trace` hears every step, and keeps the recording with a saved playlist so My playlists can
+   * replay it. A recording that fails to save costs the replay, never the playlist.
+   */
+  async generateRecorded(
+    session: Session,
+    request: GenerateRequest,
+    trace: GenerationTrace,
+  ): Promise<GeneratedPlaylist> {
+    const events: TraceEvent[] = [];
+    const playlist = await this.generate(session, request, {
+      emit: (event) => {
+        events.push(event);
+        trace.emit(event);
+      },
+    });
+    if (request.dryRun) {
+      return playlist;
+    }
+    const recorded = { ...playlist, hasTrace: true };
+    try {
+      this.library.saveTrace(playlist.id, [...events, { type: 'done', playlist: recorded }]);
+      return recorded;
+    } catch (error) {
+      this.logger.warn(`Could not keep the trace of ${playlist.id}: ${error instanceof Error ? error.message : error}`);
+      return playlist;
+    }
+  }
+
   /** `trace` hears about every step as it happens (POST /api/playlists/trace, see Visualization.md). */
   async generate(
     session: Session,
@@ -150,6 +179,7 @@ export class PlaylistService {
       seeds: request.seeds,
       durationMs: tracks.reduce((total, track) => total + track.durationMs, 0),
       tracks,
+      hasTrace: false,
     });
     const fitting = tracks.filter((track) => track.why?.similarTo).length;
     const summary =
