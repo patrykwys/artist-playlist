@@ -49,6 +49,15 @@
         >
           My playlists
         </a>
+        <a
+          class="nav-link"
+          routerLink="/lab"
+          routerLinkActive
+          #labLink="routerLinkActive"
+          [attr.data-active]="labLink.isActive"
+        >
+          Lab
+        </a>
       </nav>
       <router-outlet />
     }

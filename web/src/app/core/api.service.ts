@@ -1,7 +1,15 @@
 import { HttpClient } from '@angular/common/http';
 import { Service, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { GenerateRequest, GeneratedPlaylist, SearchResults, SpotifyUser } from './models';
+import {
+  EvaluationPlaylist,
+  EvaluationRun,
+  GenerateRequest,
+  GeneratedPlaylist,
+  SearchResults,
+  SpotifyUser,
+  StartEvaluation,
+} from './models';
 
 /** All calls go to the NestJS API through the dev-server proxy (proxy.conf.json). */
 @Service()
@@ -32,5 +40,23 @@ export class ApiService {
 
   generate(request: GenerateRequest): Observable<GeneratedPlaylist> {
     return this.#http.post<GeneratedPlaylist>('/api/playlists', request);
+  }
+
+  /** Your own playlists the ranking formula can be measured on. */
+  evaluationPlaylists(): Observable<EvaluationPlaylist[]> {
+    return this.#http.get<EvaluationPlaylist[]>('/api/evaluations/playlists');
+  }
+
+  evaluations(): Observable<EvaluationRun[]> {
+    return this.#http.get<EvaluationRun[]>('/api/evaluations');
+  }
+
+  evaluation(id: string): Observable<EvaluationRun> {
+    return this.#http.get<EvaluationRun>(`/api/evaluations/${id}`);
+  }
+
+  /** Starts a run in the background; poll `evaluation(id)` until it is no longer running. */
+  startEvaluation(settings: StartEvaluation): Observable<EvaluationRun> {
+    return this.#http.post<EvaluationRun>('/api/evaluations', settings);
   }
 }

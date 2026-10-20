@@ -1,0 +1,193 @@
+<div class="stack">
+  <section class="card">
+    <h2 class="card-title">Measure the ranking formula</h2>
+    <p class="muted intro">
+      Pick 5–10 playlists you made and love. For each, three of its artists go in as seeds and the score is how many
+      of its other artists come back in the top 50 (the hit rate). A change is only worth keeping when its verdict is
+      <strong>Better</strong>: higher on playlists like yours, not just on average on these. With fewer than five
+      playlists every verdict stays "too close to call". The first run reads a lot from Last.fm (several minutes);
+      reruns use the cache.
+    </p>
+
+    @if (store.error(); as error) {
+      <p class="error">{{ error }}</p>
+    }
+
+    @if (store.isLoading() && store.playlists().length === 0) {
+      <p class="muted">Loading your playlists…</p>
+    } @else if (store.playlists().length === 0) {
+      <p class="muted">No playlists of your own (not made by this app) to measure on.</p>
+    } @else {
+      <ul class="playlist-list" aria-label="Playlists to measure on">
+        @for (playlist of store.playlists(); track playlist.id) {
+          <li>
+            <label class="check">
+              <input
+                type="checkbox"
+                [checked]="selected().has(playlist.id)"
+                (change)="toggle(playlist.id, $any($event.target).checked)"
+              />
+              {{ playlist.name }}
+            </label>
+          </li>
+        }
+      </ul>
+    }
+
+    <div class="controls">
+      <label class="control">
+        Seed draws per playlist
+        <select [value]="folds()" (change)="folds.set(+$any($event.target).value)">
+          @for (option of foldOptions; track option) {
+            <option [value]="option">{{ option }}</option>
+          }
+        </select>
+      </label>
+      <label class="check">
+        <input type="checkbox" [checked]="tune()" (change)="tune.set($any($event.target).checked)" />
+        Also search for better weights
+      </label>
+      <button type="button" class="button button-primary" [disabled]="!canStart()" (click)="start()">
+        {{ store.isRunning() ? 'Running…' : 'Run evaluation' }}
+      </button>
+      @if (selected().size > maxPlaylists) {
+        <span class="field-error">Pick at most {{ maxPlaylists }} playlists</span>
+      }
+    </div>
+  </section>
+
+  @for (run of store.runs(); track run.id) {
+    <section class="card run">
+      <div class="run-head">
+        <h3 class="run-title">{{ run.startedAt | date: 'medium' }}</h3>
+        <span class="status" [attr.data-status]="run.status">{{ run.status }}</span>
+      </div>
+
+      @if (run.status === 'running') {
+        <progress [value]="run.progress.done" [max]="run.progress.total || 1"></progress>
+        <p class="muted">Gathering candidates: {{ run.progress.done }} of {{ run.progress.total || '?' }} seed draws</p>
+      }
+      @if (run.error; as error) {
+        <p class="error">{{ error }}</p>
+      }
+
+      @if (run.results; as results) {
+        <table class="scores">
+          <caption>
+            Hit rate: share of a playlist's other artists found in the top 50. Change: hit rate minus the original
+            formula's, with the 95% range over your playlists. Size: how much bigger or smaller the top 50 are than
+            the seeds in Last.fm listeners. Sameness: tag overlap among the top 20 (lower is more varied).
+          </caption>
+          <ng-container *ngTemplateOutlet="scoreHead; context: { $implicit: 'Formula' }" />
+          <tbody>
+            @for (score of results.presets; track score.label) {
+              <ng-container *ngTemplateOutlet="scoreRow; context: { $implicit: score }" />
+            }
+          </tbody>
+        </table>
+
+        @if (results.tuning; as tuning) {
+          <table class="scores">
+            <caption>
+              Weight search, scored fairly: each playlist is scored with the weights that did best on the others.
+              Adopt the recommended weights only if the cross-validated row says Better and they were chosen in most
+              rounds.
+            </caption>
+            <ng-container *ngTemplateOutlet="scoreHead; context: { $implicit: 'Weights' }" />
+            <tbody>
+              <ng-container *ngTemplateOutlet="scoreRow; context: { $implicit: tuning.crossValidated }" />
+              <ng-container
+                *ngTemplateOutlet="
+                  scoreRow;
+                  context: {
+                    $implicit: tuning.recommended,
+                    note: 'Recommended, chosen in ' + tuning.chosenIn.rounds + ' of ' + tuning.chosenIn.total + ' rounds',
+                  }
+                "
+              />
+            </tbody>
+          </table>
+
+          <details class="optimistic">
+            <summary>Best weights on these playlists (optimistic: scored on the data they were picked on)</summary>
+            <table class="scores">
+              <ng-container *ngTemplateOutlet="scoreHead; context: { $implicit: 'Weights' }" />
+              <tbody>
+                @for (score of tuning.best; track score.label) {
+                  <ng-container *ngTemplateOutlet="scoreRow; context: { $implicit: score }" />
+                }
+              </tbody>
+            </table>
+          </details>
+        }
+
+        <table class="scores">
+          <caption>
+            Reachable is the share of each playlist's other artists that were candidates at all: the most any
+            formula could find.
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Playlist</th>
+              <th scope="col">Artists</th>
+              <th scope="col">Reachable</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (playlist of results.playlists; track playlist.id) {
+              <tr>
+                <th scope="row">{{ playlist.name }}</th>
+                <td>{{ playlist.artists }}</td>
+                <td>{{ playlist.skipped ?? (playlist.poolRecall | percent: '1.0-0') }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+  }
+</div>
+
+<ng-template #scoreHead let-first>
+  <thead>
+    <tr>
+      <th scope="col">{{ first }}</th>
+      <th scope="col">Hit rate</th>
+      <th scope="col">Change</th>
+      <th scope="col">Verdict</th>
+      <th scope="col">nDCG</th>
+      <th scope="col">Size</th>
+      <th scope="col">Sameness</th>
+    </tr>
+  </thead>
+</ng-template>
+
+<ng-template #scoreRow let-score let-note="note">
+  <tr>
+    <th scope="row">
+      {{ score.label }}
+      @if (note) {
+        <span class="row-note">{{ note }}</span>
+      }
+    </th>
+    <td>{{ score.recall | percent: '1.1-1' }}</td>
+    <td>
+      @if (score.vsBaseline; as change) {
+        {{ formatPoints(change.mean) }}
+        <span class="row-note">{{ formatRange(change) }} · up on {{ score.wins }}, down on {{ score.losses }}</span>
+      } @else {
+        —
+      }
+    </td>
+    <td>
+      @if (score.verdict; as verdict) {
+        <span class="verdict" [attr.data-verdict]="verdict">{{ verdictLabel(verdict) }}</span>
+      } @else {
+        baseline
+      }
+    </td>
+    <td>{{ score.ndcg | percent: '1.1-1' }}</td>
+    <td>{{ formatDrift(score.drift) }}</td>
+    <td>{{ score.sameness | percent: '1.0-0' }}</td>
+  </tr>
+</ng-template>

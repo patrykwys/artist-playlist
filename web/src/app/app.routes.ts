@@ -11,5 +11,10 @@ export const routes: Routes = [
     title: 'My playlists · Artist mix',
     loadComponent: () => import('./pages/playlists-page.component').then((m) => m.PlaylistsPageComponent),
   },
+  {
+    path: 'lab',
+    title: 'Algorithm lab · Artist mix',
+    loadComponent: () => import('./pages/lab-page.component').then((m) => m.LabPageComponent),
+  },
   { path: '**', redirectTo: '' },
 ];
