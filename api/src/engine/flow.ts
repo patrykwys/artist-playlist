@@ -13,13 +13,31 @@ export function flowOrder<T>(
   similarity: (a: T, b: T) => number,
   artistOf: (item: T) => string,
 ): T[] {
+  return flowChains(items, similarity, artistOf).repaired.map((index) => items[index]);
+}
+
+/** How flowOrder got there, as indices into the items: for showing the ordering step by step. */
+export interface FlowChains {
+  greedy: number[];
+  /** Each 2-opt reversal in turn: positions `from`…`to` (inclusive) of the chain at that moment. */
+  reversals: [from: number, to: number][];
+  repaired: number[];
+}
+
+export function flowChains<T>(
+  items: readonly T[],
+  similarity: (a: T, b: T) => number,
+  artistOf: (item: T) => string,
+): FlowChains {
   // Work on indices with every pair scored once: similarity is a tag cosine, and 2-opt asks for pairs often.
   const artists = items.map(artistOf);
   const scores = items.map((a, i) => items.map((b, j) => (i === j ? 0 : similarity(a, b))));
   const sim = (i: number, j: number): number => scores[i][j];
   const differentArtist = (i: number, j: number): boolean => artists[i] !== artists[j];
   const greedy = nearestNeighbourChain(items.length, sim, differentArtist);
-  return repairWithTwoOpt(greedy, sim, differentArtist).map((index) => items[index]);
+  const reversals: [number, number][] = [];
+  const repaired = repairWithTwoOpt(greedy, sim, differentArtist, (from, to) => reversals.push([from, to]));
+  return { greedy, reversals, repaired };
 }
 
 /** The greedy pass on its own: from item 0, always the most similar remaining item, other artists first. */
@@ -61,6 +79,7 @@ export function repairWithTwoOpt(
   chain: readonly number[],
   sim: (i: number, j: number) => number,
   differentArtist: (i: number, j: number) => boolean,
+  onReverse: (from: number, to: number) => void = () => undefined,
 ): number[] {
   const path = [...chain];
   for (let pass = 0; pass < MAX_REPAIR_PASSES; pass++) {
@@ -76,6 +95,7 @@ export function repairWithTwoOpt(
         const allowed = differentArtist(before, last) && (after === undefined || differentArtist(first, after));
         if (gain > MIN_GAIN && allowed) {
           path.splice(i, j - i + 1, ...path.slice(i, j + 1).reverse());
+          onReverse(i, j);
           improved = true;
         }
       }
@@ -85,4 +105,13 @@ export function repairWithTwoOpt(
     }
   }
   return path;
+}
+
+/** Sum of neighbour similarities: what flowOrder maximises. */
+export function chainSimilarity<T>(items: readonly T[], similarity: (a: T, b: T) => number): number {
+  let total = 0;
+  for (let index = 1; index < items.length; index++) {
+    total += similarity(items[index - 1], items[index]);
+  }
+  return total;
 }
