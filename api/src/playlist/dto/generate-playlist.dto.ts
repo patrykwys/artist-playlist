@@ -19,13 +19,17 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { DEFAULT_VARIETY } from '../../engine/ranking.js';
-import type { GenerateRequest, ListenerFilter, MixMode, PlaylistSeed } from '../../models.js';
+import type { GenerateRequest, ListenerFilter, MixMode, PlaylistSeed, YearRange } from '../../models.js';
 
 const MAX_SEEDS = 10;
 const MIN_LENGTH = 10;
 const MAX_LENGTH = 100;
 const MAX_NAME_LENGTH = 100;
 const MAX_COUNTRIES = 20;
+const MAX_BLOCKED = 50;
+const MAX_BLOCKED_NAME_LENGTH = 200;
+const MIN_YEAR = 1900;
+const MAX_YEAR = 2100;
 /** ISO 3166-1 alpha-2 ('PL'); a pattern rather than a list, so codes like XK (Kosovo) are accepted. */
 const COUNTRY_CODE = /^[A-Z]{2}$/;
 const SEED_TYPES: PlaylistSeed['type'][] = ['artist', 'genre'];
@@ -53,6 +57,25 @@ export class ListenerFilterDto implements ListenerFilter {
   max: number | null = null;
 
   @Equals(true, { message: 'min must not be above max' })
+  get isOrdered(): boolean {
+    return this.min === null || this.max === null || this.min <= this.max;
+  }
+}
+
+export class YearRangeDto implements YearRange {
+  @IsOptional()
+  @IsInt()
+  @Min(MIN_YEAR)
+  @Max(MAX_YEAR)
+  min: number | null = null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(MIN_YEAR)
+  @Max(MAX_YEAR)
+  max: number | null = null;
+
+  @Equals(true, { message: 'min must not be after max' })
   get isOrdered(): boolean {
     return this.min === null || this.max === null || this.min <= this.max;
   }
@@ -91,6 +114,25 @@ export class GeneratePlaylistDto implements GenerateRequest {
   @ArrayUnique()
   @Matches(COUNTRY_CODE, { each: true, message: 'each value in countries must be a two-letter country code' })
   countries: string[] = [];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => YearRangeDto)
+  releaseYears: YearRangeDto | null = null;
+
+  @IsArray()
+  @ArrayMaxSize(MAX_BLOCKED)
+  @IsString({ each: true })
+  @IsNotEmpty({ each: true })
+  @MaxLength(MAX_BLOCKED_NAME_LENGTH, { each: true })
+  blockedArtists: string[] = [];
+
+  @IsArray()
+  @ArrayMaxSize(MAX_BLOCKED)
+  @IsString({ each: true })
+  @IsNotEmpty({ each: true })
+  @MaxLength(MAX_BLOCKED_NAME_LENGTH, { each: true })
+  blockedGenres: string[] = [];
 
   @IsNumber({ allowNaN: false, allowInfinity: false })
   @Min(0)

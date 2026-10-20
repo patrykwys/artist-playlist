@@ -28,6 +28,12 @@ export interface ListenerFilter {
   max: number | null;
 }
 
+/** Release years, both ends included. null on a side = no limit there. */
+export interface YearRange {
+  min: number | null;
+  max: number | null;
+}
+
 /** The web app sends full Seeds; generating a playlist only needs each seed's type and name. */
 export interface GenerateRequest {
   seeds: PlaylistSeed[];
@@ -38,6 +44,12 @@ export interface GenerateRequest {
   listeners: ListenerFilter | null;
   /** ISO 3166-1 alpha-2 codes ('PL'); artists must come from one of them. Empty = any country. */
   countries: string[];
+  /** Years the track's release (its album on Spotify) came out in; null = any year. */
+  releaseYears: YearRange | null;
+  /** Artists never picked, and whose tracks (features included) are never used. */
+  blockedArtists: string[];
+  /** Last.fm tags; artists for whom one of them is a big part of their profile are left out. */
+  blockedGenres: string[];
   /** 0 = the closest artists only, 1 = as varied as possible (MMR). */
   variety: number;
   /** 0 = mostly each artist's hits, 1 = anything from their top 50 tracks. */

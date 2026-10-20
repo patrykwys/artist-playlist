@@ -3,9 +3,11 @@ import { SpotifyAuthService } from '../auth/spotify-auth.service.js';
 import type { Session } from '../auth/session.service.js';
 import { RequestQueue, fetchJson } from '../common/http.js';
 import { SpotifyTrackHit } from '../engine/track-matching.js';
-import { ArtistSeed, PlaylistTrack } from '../models.js';
+import { ArtistSeed, PlaylistTrack, YearRange } from '../models.js';
 
 const BASE_URL = 'https://api.spotify.com/v1';
+/** Stands in for "no lower limit" in a year:from-to search. */
+const EARLIEST_YEAR = 1900;
 const SEARCH_LIMIT = 10; // Development Mode maximum since February 2026
 const ADD_ITEMS_CHUNK = 100;
 const PAGE_LIMIT = 50; // maximum for /me/playlists and /playlists/{id}/items
@@ -48,7 +50,8 @@ interface SpotifyTrack {
   name: string;
   duration_ms: number;
   artists: { name: string }[];
-  album?: { images?: SpotifyImage[] };
+  /** release_date is "1997", "1997-05" or "1997-05-21", depending on how precisely Spotify knows it. */
+  album?: { images?: SpotifyImage[]; release_date?: string };
 }
 
 interface ArtistSearchResponse {
@@ -107,6 +110,13 @@ export class SpotifyApiService {
   async searchTracks(session: Session, artist: string, title: string): Promise<SpotifyTrackHit[]> {
     const filtered = await this.#searchTracks(session, `track:${clean(title)} artist:${clean(artist)}`);
     return filtered.length > 0 ? filtered : this.#searchTracks(session, `${clean(artist)} ${clean(title)}`);
+  }
+
+  /** The artist's tracks released in those years, as Spotify ranks them (its most popular first, roughly). */
+  async searchTracksInYears(session: Session, artist: string, years: YearRange): Promise<SpotifyTrackHit[]> {
+    const from = years.min ?? EARLIEST_YEAR;
+    const to = years.max ?? new Date().getFullYear() + 1;
+    return this.#searchTracks(session, `artist:${clean(artist)} year:${from}-${to}`);
   }
 
   async createPlaylist(session: Session, name: string, description: string): Promise<{ id: string; url: string }> {
@@ -192,6 +202,7 @@ export class SpotifyApiService {
         artists: track.artists.map((artist) => artist.name),
         durationMs: track.duration_ms,
         imageUrl: pickImage(track.album?.images, 300),
+        releaseYear: releaseYear(track.album?.release_date),
       }));
   }
 
@@ -206,6 +217,12 @@ export class SpotifyApiService {
 function pickImage(images: SpotifyImage[] | undefined, minWidth: number): string | null {
   const sorted = [...(images ?? [])].sort((a, b) => (a.width ?? 0) - (b.width ?? 0));
   return (sorted.find((image) => (image.width ?? 0) >= minWidth) ?? sorted.at(-1))?.url ?? null;
+}
+
+/** Spotify sends "0000" for releases it has no date for. */
+function releaseYear(date: string | undefined): number | null {
+  const year = Number(date?.slice(0, 4));
+  return Number.isInteger(year) && year > 0 ? year : null;
 }
 
 /** Quotes and colons would be read as search syntax. */

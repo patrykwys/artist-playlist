@@ -34,8 +34,24 @@
   </div>
 
   <div class="field">
+    <span class="field-label">Released</span>
+    <app-range-slider
+      [formField]="optionsForm.releaseYears"
+      [floor]="releaseYears.floor"
+      [ceiling]="releaseYears.ceiling"
+      [presets]="releaseYears.presets"
+      [openEnded]="true"
+    />
+  </div>
+
+  <div class="field">
     <span class="field-label">Artists from</span>
     <app-country-select [formField]="optionsForm.countries" />
+  </div>
+
+  <div class="field">
+    <span class="field-label">Leave out artists and genres</span>
+    <app-block-select [formField]="optionsForm.blocked" />
   </div>
 
   <div class="sliders">

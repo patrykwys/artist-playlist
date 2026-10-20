@@ -10,6 +10,8 @@ const BASE_URL = 'https://ws.audioscrobbler.com/2.0/';
 const NOT_FOUND = 6;
 const RATE_LIMITED = 29;
 const CACHE_TTL_MS = 7 * DAY_MS;
+/** Last.fm's most used tags read for genre suggestions, in one call (1,000 is as many as it sends at once). */
+const TOP_TAGS = 1000;
 
 export interface SimilarArtist {
   name: string;
@@ -64,6 +66,10 @@ interface TagInfoResponse {
   tag?: { name: string; reach?: number | string; total?: number | string };
 }
 
+interface ChartTopTagsResponse {
+  tags?: { tag?: Many<{ name: string; reach?: number | string }> };
+}
+
 /** Last.fm's "rate limit exceeded" holds every request back this long, not just the one that hit it. */
 const RATE_LIMIT_PAUSE_MS = 2000;
 
@@ -80,6 +86,7 @@ export class LastfmApiService {
   readonly #similarTracks: CachedLoader<SimilarTrack[]>;
   readonly #info: CachedLoader<ArtistInfo | null>;
   readonly #tagInfo: CachedLoader<GenreSeed | null>;
+  readonly #topTags: CachedLoader<GenreSeed[]>;
 
   constructor(
     private readonly config: AppConfig,
@@ -93,6 +100,7 @@ export class LastfmApiService {
     this.#similarTracks = cache.loader('lastfm:similar-tracks', CACHE_TTL_MS);
     this.#info = cache.loader('lastfm:artist-info', CACHE_TTL_MS);
     this.#tagInfo = cache.loader('lastfm:tag-info', CACHE_TTL_MS);
+    this.#topTags = cache.loader('lastfm:top-tags', CACHE_TTL_MS);
   }
 
   artistTopTags(artist: string): Promise<RawTag[]> {
@@ -168,6 +176,16 @@ export class LastfmApiService {
       const info = response?.tag;
       const reach = Number(info?.reach ?? 0);
       return info && reach > 0 ? { type: 'genre', name: info.name.toLowerCase(), reach } : null;
+    });
+  }
+
+  /** Last.fm's most used tags, those reaching the most listeners first: what genre suggestions are drawn from. */
+  topTags(): Promise<GenreSeed[]> {
+    return this.#topTags.get(key('chart', TOP_TAGS), async () => {
+      const response = await this.#call<ChartTopTagsResponse>('chart.getTopTags', { limit: String(TOP_TAGS) });
+      return toArray(response?.tags?.tag).map(
+        (tag): GenreSeed => ({ type: 'genre', name: tag.name.toLowerCase(), reach: Number(tag.reach ?? 0) }),
+      );
     });
   }
 

@@ -1,0 +1,103 @@
+:host {
+  display: grid;
+  gap: 8px;
+}
+
+/* The menu is positioned against the input, not the whole host (the chips sit below). */
+.picker {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  max-height: 280px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);
+
+  /* Open while typing, but nothing to show until suggestions arrive. */
+  &:not(:has(.option)) {
+    display: none;
+  }
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+
+  &[data-active='true'] {
+    background: var(--surface-hover);
+  }
+
+  &[aria-selected='true'] {
+    background: var(--accent-soft);
+    font-weight: 600;
+  }
+}
+
+.thumb {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--border);
+
+  [data-type='genre'] > & {
+    border-radius: 6px;
+    background: var(--accent-soft);
+  }
+}
+
+.name {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kind {
+  color: var(--text-muted);
+  font-size: 13px;
+
+  [data-type='genre'] > & {
+    color: var(--accent);
+  }
+}
+
+.check {
+  visibility: hidden;
+  color: var(--accent);
+
+  [aria-selected='true'] > & {
+    visibility: visible;
+  }
+}
+
+.status {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.chip-kind {
+  color: var(--text-muted);
+  font-size: 12px;
+
+  [data-type='genre'] > & {
+    color: var(--accent);
+  }
+}

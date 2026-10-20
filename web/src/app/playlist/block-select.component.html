@@ -1,0 +1,81 @@
+<div class="picker">
+  <input
+    ngCombobox
+    #combobox="ngCombobox"
+    class="input"
+    autocomplete="off"
+    placeholder="Artist or genre, e.g. Drake or nu metal"
+    aria-label="Search for an artist or genre to leave out"
+    [(value)]="query"
+    [(expanded)]="expanded"
+    [disabled]="disabled()"
+    (blur)="touch.emit()"
+  />
+
+  <ng-template ngComboboxPopup [combobox]="combobox">
+    <ul
+      ngComboboxWidget
+      ngListbox
+      #listbox="ngListbox"
+      class="menu"
+      focusMode="activedescendant"
+      selectionMode="explicit"
+      [multi]="true"
+      [activeDescendant]="listbox.activeDescendant()"
+      [value]="shownBlockedKeys()"
+      (valueChange)="update($event)"
+    >
+      @for (option of options(); track option.key) {
+        <li
+          ngOption
+          class="option"
+          [attr.data-type]="option.item.type"
+          [value]="option.key"
+          [label]="option.item.name"
+        >
+          @if (option.imageUrl) {
+            <img
+              class="thumb"
+              [src]="option.imageUrl"
+              alt=""
+              width="24"
+              height="24"
+              loading="lazy"
+            />
+          } @else {
+            <span class="thumb" aria-hidden="true"></span>
+          }
+          <span class="name">{{ option.item.name }}</span>
+          <span class="kind">{{ option.item.type === 'genre' ? 'Genre' : 'Artist' }}</span>
+          <span class="check" aria-hidden="true">✓</span>
+        </li>
+      }
+    </ul>
+  </ng-template>
+</div>
+
+@if (isSearching()) {
+  <p class="status">Searching…</p>
+} @else if (hasNoMatches()) {
+  <p class="status">No artist or genre matches “{{ query().trim() }}”.</p>
+}
+
+@if (value().length > 0) {
+  <ul class="chips" aria-label="Left out">
+    @for (item of value(); track key(item)) {
+      <li class="chip" [attr.data-type]="item.type">
+        <span class="chip-kind">{{ item.type === 'genre' ? 'Genre' : 'Artist' }}</span>
+        <span>{{ item.name }}</span>
+        <button
+          type="button"
+          class="chip-remove"
+          [attr.aria-label]="'Stop leaving out ' + item.name"
+          [disabled]="disabled()"
+          (click)="remove(item)"
+        >
+          ×
+        </button>
+      </li>
+    }
+  </ul>
+}
