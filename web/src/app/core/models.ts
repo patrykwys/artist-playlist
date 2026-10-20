@@ -55,6 +55,23 @@ export interface PlaylistTrack {
   imageUrl: string | null;
 }
 
+/** Why a track is in a playlist, saved when the app generated it. */
+export interface TrackReason {
+  /** The seed whose share it fills ("a + b" in Bridge mode); null for a seed artist's own track. */
+  seed: string | null;
+  /** The ranking's parts for the artist; null for a seed artist. */
+  score: { relevance: number; walk: number; tags: number; popularityGap: number } | null;
+  /** Tags the artist shares with the seed, most telling first. */
+  sharedTags: string[];
+  /** "Artist – Title" of a seed song whose listeners also play this one. */
+  similarTo: string | null;
+}
+
+/** `why` is null for tracks added in Spotify, or made before reasons were kept. */
+export interface GeneratedTrack extends PlaylistTrack {
+  why: TrackReason | null;
+}
+
 /** Seeds as remembered in the playlist's Spotify description. */
 export interface PlaylistSeed {
   type: 'artist' | 'genre';
@@ -71,7 +88,7 @@ export interface GeneratedPlaylist {
   mode: MixMode | null;
   seeds: PlaylistSeed[];
   durationMs: number;
-  tracks: PlaylistTrack[];
+  tracks: GeneratedTrack[];
 }
 
 export interface SpotifyUser {

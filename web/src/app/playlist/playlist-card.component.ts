@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { formatPlaytime, formatTrackLength } from '../core/format';
 import { GeneratedPlaylist } from '../core/models';
+import { describeReason } from './track-reason';
 
 type CoverLayout = 'grid' | 'single' | 'empty';
 
@@ -50,6 +51,7 @@ export class PlaylistCardComponent {
     this.playlist().tracks.map((track) => ({
       ...track,
       length: formatTrackLength(track.durationMs),
+      reason: describeReason(track.why),
     })),
   );
 }
