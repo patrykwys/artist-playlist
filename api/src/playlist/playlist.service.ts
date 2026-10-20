@@ -50,14 +50,16 @@ export class PlaylistService {
         wanted: poolSize,
         listeners: request.listeners,
         countries: request.countries,
+        blockedArtists: request.blockedArtists,
+        blockedGenres: request.blockedGenres,
         walks: [params.hops === 2 ? 'twoHop' : 'oneHop'],
       }),
       this.trackFit.forSeeds(request.seeds),
     ]);
     if (pool.artists.length === 0) {
       throw new UnprocessableEntityException(
-        request.listeners || request.countries.length > 0
-          ? 'No similar artists match those filters. Try widening the listener range or adding countries.'
+        request.listeners || request.countries.length > 0 || request.blockedGenres.length > 0
+          ? 'No similar artists match those filters. Try widening the listener range, adding countries or blocking fewer genres.'
           : 'No similar artists found for these seeds',
       );
     }
@@ -68,6 +70,7 @@ export class PlaylistService {
       length: request.length,
       deepCuts: request.deepCuts,
       fit,
+      blockedArtists: request.blockedArtists,
     });
     // The same rarity weighting the ranking used, for the reasons and the running order.
     const weigh = params.tfidf ? tfidf(pool.artists.map((artist) => artist.tags)) : unweighted;

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CandidatePool, PoolArtist, PoolSeed } from '../engine/ranking.js';
 import { artistKey, shortlist } from '../engine/scoring.js';
-import { RawTag, TagMap, normalizeTag, toTagMap, topRawTags, topTags } from '../engine/tags.js';
+import { RawTag, TagMap, blockedTagOf, normalizeTag, toTagMap, topRawTags, topTags } from '../engine/tags.js';
 import { Edges, WalkScores, walkScores } from '../engine/walk.js';
 import { LastfmApiService } from '../lastfm/lastfm-api.service.js';
 import { ListenerFilter, PlaylistSeed } from '../models.js';
@@ -44,11 +44,15 @@ export interface PoolRequest {
   listeners: ListenerFilter | null;
   /** ISO 3166-1 alpha-2; each gets an equal share of `wanted`. */
   countries: string[];
+  /** Never candidates; the shortlist takes the next closest instead. */
+  blockedArtists: string[];
+  /** Last.fm tags; artists for whom one is a big part of their profile don't pass the filters. */
+  blockedGenres: string[];
   /** Walks that pick the shortlist: the formula's own, or both so the old and new formulas see the same pool. */
   walks: WalkKind[];
 }
 
-type ArtistFilters = Pick<PoolRequest, 'listeners' | 'countries'>;
+type ArtistFilters = Pick<PoolRequest, 'listeners' | 'countries' | 'blockedGenres'>;
 
 /** Candidate key → country when a country filter is on (null otherwise). */
 type Shortlist = Map<string, string | null>;
@@ -85,12 +89,14 @@ export class CandidatePoolService {
     const seedKeys = new Set(profiled.flatMap((seed) => (seed.artistName ? [artistKey(seed.artistName)] : [])));
     const walks = await Promise.all(profiled.map((seed) => this.#walk(seed, seedKeys, names)));
 
+    // Blocked artists still link others in the walk; they just never become candidates.
+    const exclude = new Set([...seedKeys, ...request.blockedArtists.map(artistKey)]);
     const ordering = walks.flatMap((walk) => request.walks.map((kind) => walk[kind]));
 
-    const isFiltered = request.listeners !== null || request.countries.length > 0;
+    const isFiltered = request.listeners !== null || request.countries.length > 0 || request.blockedGenres.length > 0;
     const keys: Shortlist = isFiltered
-      ? await this.#filteredShortlist(ordering, profiled, seedKeys, names, request)
-      : new Map(shortlist(ordering, request.perSeed, seedKeys).map((key) => [key, null]));
+      ? await this.#filteredShortlist(ordering, profiled, exclude, names, request)
+      : new Map(shortlist(ordering, request.perSeed, exclude).map((key) => [key, null]));
 
     const artists = await Promise.all(
       [...keys].map(([key, country]) => this.#poolArtist(key, names.get(key) ?? key, country)),
@@ -280,27 +286,36 @@ export class CandidatePoolService {
    * The keys that pass the filters, with their countries. The country comes from the MusicBrainz id Last.fm
    * has for the name, since that is the artist whose tracks get picked; `fallbackCountries` only covers names
    * Last.fm has no id for. Unknown listener counts count as 0; an unknown country never passes a country filter.
+   * Blocked genres cost one more Last.fm call per artist (their tags, which every candidate needs anyway).
    */
   async #matching(
     keys: string[],
     names: Map<string, string>,
-    { listeners, countries }: ArtistFilters,
+    { listeners, countries, blockedGenres }: ArtistFilters,
     fallbackCountries: ReadonlyMap<string, string>,
   ): Promise<Shortlist> {
+    const blocked = new Set(blockedGenres.map(normalizeTag));
     const artists = await Promise.all(
-      keys.map(async (key) => ({ key, info: await this.lastfm.artistInfo(names.get(key) ?? key) })),
+      keys.map(async (key) => {
+        const name = names.get(key) ?? key;
+        const [info, tags] = await Promise.all([
+          this.lastfm.artistInfo(name),
+          blocked.size > 0 ? this.lastfm.artistTopTags(name) : [],
+        ]);
+        return { key, info, tags: toTagMap(tags) };
+      }),
     );
     const mbids = countries.length > 0 ? artists.flatMap(({ info }) => (info?.mbid ? [info.mbid] : [])) : [];
     const countryByMbid = await this.artistCountries.byMusicBrainzId(mbids);
 
     const kept: Shortlist = new Map();
-    for (const { key, info } of artists) {
+    for (const { key, info, tags } of artists) {
       const country = info?.mbid
         ? (countryByMbid.get(info.mbid.toLowerCase()) ?? null)
         : (fallbackCountries.get(key) ?? null);
       const inRange = listeners === null || withinRange(info?.listeners ?? 0, listeners);
       const inCountry = countries.length === 0 || (country !== null && countries.includes(country));
-      if (inRange && inCountry) {
+      if (inRange && inCountry && !blockedTagOf(tags, blocked)) {
         kept.set(key, countries.length > 0 ? country : null);
       }
     }
@@ -321,11 +336,12 @@ function countryCount(pool: Shortlist, country: string): number {
   return [...pool.values()].filter((value) => value === country).length;
 }
 
-/** For the log: "listeners 0–50000, countries PL IE". */
-function describeFilters({ listeners, countries }: ArtistFilters): string {
+/** For the log: "listeners 0–50000, countries PL IE, not metal, emo". */
+function describeFilters({ listeners, countries, blockedGenres }: ArtistFilters): string {
   return [
     listeners && `listeners ${listeners.min ?? 0}–${listeners.max ?? '∞'}`,
     countries.length > 0 && `countries ${countries.join(' ')}`,
+    blockedGenres.length > 0 && `not ${blockedGenres.join(', ')}`,
   ]
     .filter(Boolean)
     .join(', ');

@@ -26,6 +26,8 @@ const MIN_LENGTH = 10;
 const MAX_LENGTH = 100;
 const MAX_NAME_LENGTH = 100;
 const MAX_COUNTRIES = 20;
+const MAX_BLOCKED = 50;
+const MAX_BLOCKED_NAME_LENGTH = 200;
 /** ISO 3166-1 alpha-2 ('PL'); a pattern rather than a list, so codes like XK (Kosovo) are accepted. */
 const COUNTRY_CODE = /^[A-Z]{2}$/;
 const SEED_TYPES: PlaylistSeed['type'][] = ['artist', 'genre'];
@@ -91,6 +93,20 @@ export class GeneratePlaylistDto implements GenerateRequest {
   @ArrayUnique()
   @Matches(COUNTRY_CODE, { each: true, message: 'each value in countries must be a two-letter country code' })
   countries: string[] = [];
+
+  @IsArray()
+  @ArrayMaxSize(MAX_BLOCKED)
+  @IsString({ each: true })
+  @IsNotEmpty({ each: true })
+  @MaxLength(MAX_BLOCKED_NAME_LENGTH, { each: true })
+  blockedArtists: string[] = [];
+
+  @IsArray()
+  @ArrayMaxSize(MAX_BLOCKED)
+  @IsString({ each: true })
+  @IsNotEmpty({ each: true })
+  @MaxLength(MAX_BLOCKED_NAME_LENGTH, { each: true })
+  blockedGenres: string[] = [];
 
   @IsNumber({ allowNaN: false, allowInfinity: false })
   @Min(0)

@@ -177,6 +177,22 @@ export function sharedTags(a: TagMap, b: TagMap, count: number): string[] {
     .map(([tag]) => tag);
 }
 
+/**
+ * Weight (0–100, the artist's top tag being 100) from which a tag counts as part of who the artist is:
+ * Deftones' "metal" (46) does, Radiohead's "electronic" (11) does not.
+ */
+export const BLOCKED_TAG_WEIGHT = 20;
+
+/** Whether one of the blocked tags (normalised) is a big part of the profile. Exact tags only: "metal" ≠ "nu metal". */
+export function hasBlockedTag(tags: TagMap, blocked: ReadonlySet<string>): boolean {
+  return blockedTagOf(tags, blocked) !== null;
+}
+
+/** The first blocked tag that weighs enough in the profile to leave the artist out, or null. */
+export function blockedTagOf(tags: TagMap, blocked: ReadonlySet<string>): string | null {
+  return [...blocked].find((tag) => (tags.get(tag) ?? 0) >= BLOCKED_TAG_WEIGHT) ?? null;
+}
+
 /** Several profiles as one: weights summed per tag (the seeds of a Bridge playlist together). */
 export function combineTags(profiles: readonly TagMap[]): Map<string, number> {
   const combined = new Map<string, number>();

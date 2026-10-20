@@ -103,6 +103,8 @@ export class EvaluationService implements OnModuleInit {
         wanted: 0,
         listeners: null,
         countries: [],
+        blockedArtists: [],
+        blockedGenres: [],
         walks: ['oneHop', 'twoHop'],
       });
       folds.push({ playlistId: fold.playlistId, pool, heldOut: fold.heldOut });

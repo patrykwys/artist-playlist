@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Session } from '../auth/session.service.js';
 import { Score } from '../engine/ranking.js';
-import { quotas } from '../engine/scoring.js';
+import { artistKey, quotas } from '../engine/scoring.js';
 import { TagMap } from '../engine/tags.js';
 import { SpotifyTrackHit, TrackChoice, chooseTracks, findMatch, normalizeName } from '../engine/track-matching.js';
 import { LastfmApiService } from '../lastfm/lastfm-api.service.js';
@@ -31,6 +31,8 @@ export interface FillOptions {
   length: number;
   deepCuts: number;
   fit?: TrackFit;
+  /** Artists whose tracks are never used, features included. */
+  blockedArtists?: readonly string[];
 }
 
 /** What every lookup in one fill shares. */
@@ -39,6 +41,8 @@ interface FillContext {
   used: UsedSets;
   deepCuts: number;
   fit: TrackFit;
+  /** Artist keys. */
+  blocked: ReadonlySet<string>;
 }
 
 interface Found {
@@ -76,13 +80,14 @@ export class TrackPickerService {
   async fill(
     session: Session,
     buckets: readonly (readonly PickableArtist[])[],
-    { length, deepCuts, fit = new Map() }: FillOptions,
+    { length, deepCuts, fit = new Map(), blockedArtists = [] }: FillOptions,
   ): Promise<TrackPick[][]> {
     const context: FillContext = {
       session,
       used: { artists: new Set(), uris: new Set(), songs: new Set() },
       deepCuts,
       fit,
+      blocked: new Set(blockedArtists.map(artistKey)),
     };
     const states: BucketState[] = buckets.map((artists) => ({ artists, cursor: 0, picks: [] }));
     const shares = quotas(length, states.length);
@@ -133,8 +138,8 @@ export class TrackPickerService {
   }
 
   /**
-   * A song by the artist that exists on Spotify and is not in the playlist yet: one that fits a seed song when
-   * Last.fm knows one (see TrackFitService), otherwise one of their top tracks.
+   * A song by the artist that exists on Spotify, is not in the playlist yet and credits no blocked artist:
+   * one that fits a seed song when Last.fm knows one (see TrackFitService), otherwise one of their top tracks.
    */
   async #findTrack(context: FillContext, artist: PickableArtist): Promise<Omit<TrackPick, 'artist'> | null> {
     const topTracks = await this.lastfm.artistTopTracks(artist.name, TOP_TRACKS);
@@ -170,9 +175,13 @@ export class TrackPickerService {
   }
 }
 
-/** Not in the playlist yet, in any release. */
-function isUsable({ used }: FillContext, artist: PickableArtist, hit: SpotifyTrackHit): boolean {
-  return !used.uris.has(hit.uri) && !used.songs.has(songKey(artist, hit.name));
+/** Not in the playlist yet (in any release) and crediting no blocked artist. */
+function isUsable({ used, blocked }: FillContext, artist: PickableArtist, hit: SpotifyTrackHit): boolean {
+  return (
+    !used.uris.has(hit.uri) &&
+    !used.songs.has(songKey(artist, hit.name)) &&
+    !hit.artists.some((credit) => blocked.has(artistKey(credit)))
+  );
 }
 
 function songKey(artist: PickableArtist, title: string): string {
