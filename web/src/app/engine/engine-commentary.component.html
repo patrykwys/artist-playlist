@@ -1,0 +1,37 @@
+<header class="head">
+  <h3 class="title">Commentary</h3>
+  <span class="count">{{ lines().length }} lines</span>
+  @if (story(); as story) {
+    <span class="following">
+      Following <strong>{{ story.name }}</strong>
+      <button type="button" class="unfollow" aria-label="Stop following" (click)="unfollow.emit()">✕</button>
+    </span>
+  } @else {
+    <span class="hint">Click an artist card to follow it · click a line to see the floor at that moment</span>
+  }
+  <button type="button" class="button button-small expand" (click)="isOpen.update((isOpen) => !isOpen)">
+    {{ isOpen() ? 'Shrink' : 'Expand' }}
+  </button>
+</header>
+
+<div class="body" [attr.data-story]="story() !== null">
+  @if (story(); as story) {
+    <ol class="story" [attr.aria-label]="story.name + '’s way through the floor so far'">
+      @for (step of story.steps; track $index) {
+        <li class="story-step" [attr.data-tone]="step.tone" animate.enter="line-in">{{ step.text }}</li>
+      } @empty {
+        <li class="story-step">Not on the floor yet at this point of the run.</li>
+      }
+    </ol>
+  }
+  <ol #list class="lines" (scroll)="onScroll(list)">
+    @for (line of lines(); track line.id) {
+      <li class="line" [attr.data-tone]="line.tone">
+        <button type="button" class="line-button" (click)="jump.emit(line.id)">{{ line.text }}</button>
+      </li>
+    }
+  </ol>
+  @if (!isAtLatest()) {
+    <button type="button" class="to-latest" (click)="toLatest()">Latest ↓</button>
+  }
+</div>

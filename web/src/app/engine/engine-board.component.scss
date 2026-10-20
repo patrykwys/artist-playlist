@@ -1,0 +1,175 @@
+:host {
+  --link-width: 30px;
+
+  display: grid;
+  grid-template-columns:
+    minmax(170px, 0.8fr) var(--link-width) minmax(200px, 0.95fr) var(--link-width) minmax(240px, 1.05fr)
+    var(--link-width) minmax(280px, 1.3fr) var(--link-width) minmax(240px, 1.1fr);
+  min-height: 0;
+}
+
+.station {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  transition:
+    border-color 300ms,
+    box-shadow 300ms;
+}
+
+.station[data-active='true'] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.station-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.station-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.station-number {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.station-stat {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.station-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.waiting {
+  color: var(--accent);
+  font-size: 12px;
+  animation: engine-breathe 1.4s ease-in-out infinite;
+}
+
+/* Connectors: chevrons stream towards the station that is working. */
+
+.link {
+  position: relative;
+  align-self: center;
+  height: 14px;
+  margin: 0 3px;
+  opacity: 0.35;
+  background: repeating-linear-gradient(90deg, transparent 0 4px, var(--text-muted) 4px 6px, transparent 6px 10px);
+  mask: linear-gradient(90deg, transparent, black 30%, black 70%, transparent);
+  transition: opacity 300ms;
+}
+
+.link::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -2px;
+  border: 6px solid transparent;
+  border-left-color: var(--text-muted);
+  transform: translateY(-50%);
+}
+
+.link[data-past='true'] {
+  opacity: 0.6;
+}
+
+.link[data-on='true'] {
+  opacity: 1;
+  background: repeating-linear-gradient(90deg, transparent 0 3px, var(--accent) 3px 7px, transparent 7px 12px);
+  animation: stream 0.6s linear infinite;
+}
+
+.link[data-on='true']::after {
+  border-left-color: var(--accent);
+}
+
+@keyframes stream {
+  to {
+    background-position: 12px 0;
+  }
+}
+
+@keyframes stream-down {
+  to {
+    background-position: 0 12px;
+  }
+}
+
+/* Narrow screens: stations stack, connectors point down. */
+@media (max-width: 1180px) {
+  :host {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .station {
+    height: min(70vh, 560px);
+  }
+
+  .link {
+    justify-self: center;
+    width: 14px;
+    height: var(--link-width);
+    margin: 3px 0;
+    background: repeating-linear-gradient(180deg, transparent 0 4px, var(--text-muted) 4px 6px, transparent 6px 10px);
+    mask: linear-gradient(180deg, transparent, black 30%, black 70%, transparent);
+  }
+
+  .link[data-on='true'] {
+    background: repeating-linear-gradient(180deg, transparent 0 3px, var(--accent) 3px 7px, transparent 7px 12px);
+    animation-name: stream-down;
+  }
+
+  .link::after,
+  .link[data-on='true']::after {
+    top: auto;
+    right: 50%;
+    bottom: -8px;
+    border-left-color: transparent;
+    transform: translateX(50%);
+  }
+
+  .link::after {
+    border-top-color: var(--text-muted);
+  }
+
+  .link[data-on='true']::after {
+    border-top-color: var(--accent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link[data-on='true'],
+  .waiting {
+    animation: none;
+  }
+}

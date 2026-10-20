@@ -14,6 +14,7 @@ import {
 import { LastfmApiService } from '../lastfm/lastfm-api.service.js';
 import { PlaylistTrack, YearRange } from '../models.js';
 import { SpotifyApiService } from '../spotify/spotify-api.service.js';
+import { GenerationTrace, NO_TRACE } from './generation-trace.js';
 import { TOP_TRACKS, TrackFit } from './track-fit.service.js';
 
 /** Titles tried on Spotify per artist before giving up on them. */
@@ -42,6 +43,7 @@ export interface FillOptions {
   releaseYears?: YearRange | null;
   /** Artists whose tracks are never used, features included. */
   blockedArtists?: readonly string[];
+  trace?: GenerationTrace;
 }
 
 /** What every lookup in one fill shares. */
@@ -55,6 +57,7 @@ interface FillContext {
   blocked: ReadonlySet<string>;
   /** Artist key → their tracks from the release years: searched once, also for a second track. */
   inYears: Map<string, Promise<SpotifyTrackHit[]>>;
+  trace: GenerationTrace;
 }
 
 interface Found {
@@ -63,7 +66,7 @@ interface Found {
 }
 
 interface BucketState {
-
+  index: number;
   artists: readonly PickableArtist[];
   cursor: number;
   picks: TrackPick[];
@@ -92,7 +95,7 @@ export class TrackPickerService {
   async fill(
     session: Session,
     buckets: readonly (readonly PickableArtist[])[],
-    { length, deepCuts, fit = new Map(), releaseYears = null, blockedArtists = [] }: FillOptions,
+    { length, deepCuts, fit = new Map(), releaseYears = null, blockedArtists = [], trace = NO_TRACE }: FillOptions,
   ): Promise<TrackPick[][]> {
     const context: FillContext = {
       session,
@@ -102,15 +105,19 @@ export class TrackPickerService {
       releaseYears,
       blocked: new Set(blockedArtists.map(artistKey)),
       inYears: new Map(),
+      trace,
     };
-    const states: BucketState[] = buckets.map((artists) => ({ artists, cursor: 0, picks: [] }));
+    const states: BucketState[] = buckets.map((artists, index) => ({ index, artists, cursor: 0, picks: [] }));
     const shares = quotas(length, states.length);
     const missing = (): number => length - states.reduce((sum, state) => sum + state.picks.length, 0);
-    await Promise.all(states.map((state, index) => this.#fillBucket(context, state, shares.at(index) ?? 0)));
+    const fillBucket = (state: BucketState, target: number, pass: 1 | 2): Promise<void> =>
+      this.#fillBucket(context, state, target, pass);
+
+    await Promise.all(states.map((state, index) => fillBucket(state, shares.at(index) ?? 0, 1)));
 
     for (const state of states) {
       if (missing() > 0) {
-        await this.#fillBucket(context, state, state.picks.length + missing());
+        await fillBucket(state, state.picks.length + missing(), 2);
       }
     }
 
@@ -123,13 +130,14 @@ export class TrackPickerService {
         if (found) {
           state.picks.push({ ...found, artist: pick.artist });
         }
+        this.#report(context, state, pick.artist, found, 3);
       }
     }
 
     return states.map((state) => state.picks);
   }
 
-  async #fillBucket(context: FillContext, state: BucketState, target: number): Promise<void> {
+  async #fillBucket(context: FillContext, state: BucketState, target: number, pass: 1 | 2): Promise<void> {
     const { used } = context;
     while (state.picks.length < target && state.cursor < state.artists.length) {
       const batch: PickableArtist[] = [];
@@ -144,11 +152,40 @@ export class TrackPickerService {
       const found = await Promise.all(batch.map((artist) => this.#findTrack(context, artist)));
       found.forEach((pick, index) => {
         const artist = batch.at(index);
-        if (artist && pick && state.picks.length < target) {
+        if (!artist) {
+          return;
+        }
+        const fits = state.picks.length < target;
+        if (pick && fits) {
           state.picks.push({ ...pick, artist });
         }
+        this.#report(context, state, artist, pick, pass, pick !== null && !fits);
       });
     }
+  }
+
+  /** One lookup for the trace: the track that went in, or why none did. */
+  #report(
+    { trace, releaseYears }: FillContext,
+    state: BucketState,
+    artist: PickableArtist,
+    found: Omit<TrackPick, 'artist'> | null,
+    pass: 1 | 2 | 3,
+    shareFull = false,
+  ): void {
+    const track =
+      found && !shareFull
+        ? { uri: found.track.uri, title: found.track.title, artist: found.track.artist, similarTo: found.similarTo }
+        : null;
+    const detail = track
+      ? null
+      : shareFull
+        ? 'share already full'
+        : releaseYears
+          ? 'no usable song from those years'
+          : 'no usable song on Spotify';
+    const { key, name } = artist;
+    trace.emit({ type: 'lookup', bucket: state.index, artist: { key, name }, track, detail, pass });
   }
 
   /**

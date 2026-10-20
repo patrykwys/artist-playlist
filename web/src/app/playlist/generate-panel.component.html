@@ -73,6 +73,11 @@
     Include tracks by the seed artists
   </label>
 
+  <label class="check">
+    <input type="checkbox" [formField]="optionsForm.dryRun" />
+    Watch only: run the engine without saving anything to Spotify
+  </label>
+
   @for (error of optionsForm().errorSummary(); track $index) {
     <p class="field-error">{{ error.message }}</p>
   }
@@ -84,7 +89,7 @@
       [disabled]="!canGenerate() || isGenerating() || optionsForm().invalid()"
       (click)="submit()"
     >
-      {{ isGenerating() ? 'Generating…' : 'Generate playlist' }}
+      {{ isGenerating() ? 'Generating…' : options().dryRun ? 'Watch a dry run' : 'Generate playlist' }}
     </button>
     @if (isGenerating()) {
       <span class="actions-note"

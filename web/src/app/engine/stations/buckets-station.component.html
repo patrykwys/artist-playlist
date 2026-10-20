@@ -1,0 +1,78 @@
+@let s = scene();
+
+<div class="body" data-scroll>
+  @for (bucket of s.buckets; track $index; let b = $index) {
+    <article class="bucket" [style.--hue]="bucket.hue">
+      <header class="head" [attr.data-anchor]="'anchor:bucket' + b">
+        <span class="engine-dot"></span>
+        <span class="label">{{ bucket.label }}</span>
+        <span class="fill">
+          <span class="meter">
+            <span class="level" [style.--v]="bucket.share ? bucket.filled / bucket.share : 0"></span>
+          </span>
+          {{ bucket.filled }}/{{ bucket.share }}
+        </span>
+      </header>
+      <ol class="rows">
+        @for (artist of visibleRows(bucket); track artist.key; let i = $index) {
+          <li
+            class="row"
+            [style.--hue]="hueOf(artist.name)"
+            [attr.data-status]="artist.status"
+            [attr.data-current]="i === bucket.cursor"
+            [attr.data-flip]="'b' + b + ':' + artist.key"
+            [attr.data-artist]="artist.key"
+            [attr.data-pinned]="pinState(pinned(), artist.key)"
+            [attr.data-from]="origin(artist)"
+            [attr.data-keep-visible]="i === bucket.cursor ? '' : null"
+            [title]="scoreTitle(artist)"
+          >
+            <span class="rank">{{ i + 1 }}</span>
+            <span class="engine-disc engine-disc-small">{{ initialsOf(artist.name) }}</span>
+            <span class="main">
+              <span class="name">
+                {{ artist.name }}
+                @if (artist.seed) {
+                  <span class="badge">seed</span>
+                }
+                @if (s.lineup && artist.shift !== 0 && artist.status === 'waiting') {
+                  <span class="shift" [attr.data-up]="artist.shift > 0">
+                    {{ artist.shift > 0 ? '↑' + artist.shift : '↓' + -artist.shift }}
+                  </span>
+                }
+              </span>
+              @if (artist.note) {
+                <span class="note">{{ artist.note }}</span>
+              }
+            </span>
+            @if (artist.score; as score) {
+              <span class="bars" aria-hidden="true">
+                <span class="bar bar-walk" [style.--v]="score.walk"></span>
+                <span class="bar bar-tags" [style.--v]="score.tags"></span>
+                <span class="bar bar-gap" [style.--v]="score.popularityGap > 1 ? 1 : score.popularityGap"></span>
+              </span>
+              <span class="score">{{ score.relevance.toFixed(2) }}</span>
+            } @else {
+              <span></span>
+              <span></span>
+            }
+            <span class="status" aria-hidden="true"></span>
+          </li>
+        }
+      </ol>
+      @if (bucket.artists.length > visibleRows(bucket).length) {
+        <p class="more">+{{ bucket.artists.length - visibleRows(bucket).length }} more</p>
+      }
+    </article>
+  } @empty {
+    <p class="engine-idle">The shortlist is scored here: similar-artist links, shared tags, size gap.</p>
+  }
+</div>
+
+@if (s.buckets.length > 0) {
+  <p class="legend" aria-hidden="true">
+    <span class="legend-item"><span class="bar bar-walk" style="--v: 1"></span> links</span>
+    <span class="legend-item"><span class="bar bar-tags" style="--v: 1"></span> tags</span>
+    <span class="legend-item"><span class="bar bar-gap" style="--v: 1"></span> size gap</span>
+  </p>
+}

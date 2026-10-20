@@ -1,0 +1,81 @@
+@let s = scene();
+
+<section class="station" [attr.data-active]="active() === 'seeds'" aria-labelledby="station-seeds">
+  <header class="station-head">
+    <h3 id="station-seeds" class="station-title"><span class="station-number">1</span> Seeds</h3>
+    @if (active() === 'seeds' && waitingOn(); as waiting) {
+      <span class="waiting">{{ waiting }}</span>
+    }
+  </header>
+  <app-seeds-station class="station-content" [scene]="s" [pinned]="pinned()" />
+</section>
+
+<div
+  class="link"
+  [attr.data-on]="active() === 'discovery'"
+  [attr.data-past]="isPast()('discovery')"
+  aria-hidden="true"
+></div>
+
+<section class="station" [attr.data-active]="active() === 'discovery'" aria-labelledby="station-discovery">
+  <header class="station-head">
+    <h3 id="station-discovery" class="station-title"><span class="station-number">2</span> Discovery</h3>
+    @if (active() === 'discovery' && waitingOn(); as waiting) {
+      <span class="waiting">{{ waiting }}</span>
+    }
+  </header>
+  <app-discovery-station class="station-content" [scene]="s" [pinned]="pinned()" />
+</section>
+
+<div
+  class="link"
+  [attr.data-on]="active() === 'checkpoint'"
+  [attr.data-past]="isPast()('checkpoint')"
+  aria-hidden="true"
+></div>
+
+<section class="station" [attr.data-active]="active() === 'checkpoint'" aria-labelledby="station-checkpoint">
+  <header class="station-head">
+    <h3 id="station-checkpoint" class="station-title"><span class="station-number">3</span> Checkpoint</h3>
+    @if (active() === 'checkpoint' && waitingOn(); as waiting) {
+      <span class="waiting">{{ waiting }}</span>
+    }
+  </header>
+  <app-checkpoint-station class="station-content" [scene]="s" [pinned]="pinned()" />
+</section>
+
+<div
+  class="link"
+  [attr.data-on]="active() === 'buckets'"
+  [attr.data-past]="isPast()('buckets')"
+  aria-hidden="true"
+></div>
+
+<section class="station" [attr.data-active]="active() === 'buckets'" aria-labelledby="station-buckets">
+  <header class="station-head">
+    <h3 id="station-buckets" class="station-title"><span class="station-number">4</span> Buckets</h3>
+    @if (active() === 'buckets' && waitingOn(); as waiting) {
+      <span class="waiting">{{ waiting }}</span>
+    }
+  </header>
+  <app-buckets-station class="station-content" [scene]="s" [pinned]="pinned()" />
+</section>
+
+<div
+  class="link"
+  [attr.data-on]="active() === 'playlist'"
+  [attr.data-past]="isPast()('playlist')"
+  aria-hidden="true"
+></div>
+
+<section class="station" [attr.data-active]="active() === 'playlist'" aria-labelledby="station-playlist">
+  <header class="station-head">
+    <h3 id="station-playlist" class="station-title"><span class="station-number">5</span> Playlist</h3>
+    @if (active() === 'playlist' && waitingOn(); as waiting) {
+      <span class="waiting">{{ waiting }}</span>
+    } @else if (s.config) {
+      <span class="station-stat">{{ s.tracks.length }}/{{ s.config.length }}</span>
+    }
+  </header>
+  <app-playlist-station class="station-content" [scene]="s" [pinned]="pinned()" />
+</section>

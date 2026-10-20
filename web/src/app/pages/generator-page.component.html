@@ -28,7 +28,17 @@
   </section>
 
   @if (generator.isLoading()) {
-    <div class="pending-card">Building your playlist…</div>
+    <div class="pending-card">
+      Building your playlist…
+      <button type="button" class="button button-small" (click)="isWatching.set(true)">Watch the engine</button>
+    </div>
+  }
+
+  @if (generator.isDryRun() && !generator.isLoading() && !generator.hasError() && generator.trace().length > 0) {
+    <div class="dry-run">
+      Dry run done: nothing was saved to Spotify. Your seeds are still here to try again.
+      <button type="button" class="button button-small" (click)="isWatching.set(true)">Watch it again</button>
+    </div>
   }
 
   @if (generator.latest(); as latest) {
@@ -37,7 +47,15 @@
         <h2 class="section-title">Just created</h2>
         <a class="latest-link" routerLink="/playlists">All my playlists →</a>
       </div>
-      <app-playlist-card [playlist]="latest" [expanded]="true" />
+      <app-playlist-card [playlist]="latest" [expanded]="true" (watch)="isWatching.set(true)" />
     </section>
   }
 </div>
+
+@if (isWatching()) {
+  <app-engine-theatre
+    [events]="generator.trace()"
+    [isLive]="generator.isLoading()"
+    (close)="isWatching.set(false)"
+  />
+}

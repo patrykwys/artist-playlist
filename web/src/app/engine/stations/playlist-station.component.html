@@ -1,0 +1,62 @@
+@let s = scene();
+
+<div class="body" data-scroll>
+  <ol class="tracks">
+    @for (track of s.tracks; track track.uri; let i = $index) {
+      <li
+        class="track"
+        [style.--hue]="track.hue"
+        [attr.data-flipped]="isFlipped(i)"
+        [attr.data-flip]="'track:' + track.uri"
+        [attr.data-artist]="track.artistKey"
+        [attr.data-pinned]="pinState(pinned(), track.artistKey)"
+        [attr.data-from]="'b' + track.bucket + ':' + track.artistKey + ' anchor:bucket' + track.bucket"
+        [attr.data-keep-visible]="isFocus(i) ? '' : null"
+        [title]="track.similarTo ? 'Fits ' + track.similarTo : ''"
+      >
+        <span class="number">{{ i + 1 }}</span>
+        <span class="main">
+          <span class="title">{{ track.title }}</span>
+          <span class="artist">{{ track.artist }}</span>
+        </span>
+        @if (track.similarTo) {
+          <span class="fits" aria-label="Fits a seed song">✦</span>
+        }
+      </li>
+    } @empty {
+      <li class="engine-idle">Tracks found on Spotify land here.</li>
+    }
+  </ol>
+</div>
+
+@if (s.flow.greedy !== null || s.saved) {
+  <footer class="foot">
+    @if (s.flow.greedy !== null) {
+      <p class="flow">
+        <span>Flow</span>
+        <span class="value">{{ s.flow.greedy.toFixed(2) }}</span>
+        @if (s.flow.score !== null && s.flow.score !== s.flow.greedy) {
+          → <span class="value value-better">{{ s.flow.score.toFixed(2) }}</span>
+        }
+        <span class="note">
+          {{ s.flow.reversals }} 2-opt {{ s.flow.reversals === 1 ? 'reversal' : 'reversals' }}
+        </span>
+      </p>
+    }
+    @if (s.saved; as saved) {
+      @if (saved.url) {
+        <a
+          class="button button-primary spotify"
+          [href]="saved.url"
+          target="_blank"
+          rel="noopener"
+          animate.enter="engine-pop"
+        >
+          Open “{{ saved.name }}” in Spotify
+        </a>
+      } @else {
+        <p class="dry-run" animate.enter="engine-pop">Dry run: “{{ saved.name }}” was not saved to Spotify</p>
+      }
+    }
+  </footer>
+}

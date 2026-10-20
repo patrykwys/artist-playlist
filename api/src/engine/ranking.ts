@@ -118,7 +118,7 @@ export interface Scorer {
   vectorOf(artist: PoolArtist): TagMap;
 }
 
-/** rankPool's building blocks, also for explaining a ranking. */
+/** rankPool's building blocks, also for explaining a ranking (the Engine view's mixing desk). */
 export function scorer(pool: CandidatePool, params: ScoringParams): Scorer {
   const weigh = params.tfidf ? tfidf(pool.artists.map((artist) => artist.tags)) : unweighted;
   const vectors = new Map(pool.artists.map((artist) => [artist.key, weigh(artist.tags)]));

@@ -1,0 +1,41 @@
+<div class="body" data-scroll>
+  @for (seed of scene().seeds; track seed.label) {
+    <article
+      class="seed"
+      [style.--hue]="seed.hue"
+      [attr.data-flip]="'seed:' + seed.label"
+      [attr.data-artist]="seed.kind === 'artist' ? artistKey(seed.label) : null"
+      [attr.data-pinned]="pinState(pinned(), artistKey(seed.label))"
+    >
+      <div class="seed-head">
+        <span class="engine-disc engine-disc-large">{{ initialsOf(seed.label) }}</span>
+        <div>
+          <p class="seed-name">{{ seed.label }}</p>
+          <p class="seed-meta">
+            {{ seed.kind === 'genre' ? 'Genre' : 'Artist' }}
+            @if (seed.listeners !== null) {
+              · {{ formatCompact(seed.listeners) }} listeners
+            }
+          </p>
+        </div>
+      </div>
+      @if (seed.tags; as tags) {
+        <ul class="tags">
+          @for (tag of tags; track tag.name) {
+            <li class="tag" animate.enter="engine-pop">
+              <span class="tag-name">{{ tag.name }}</span>
+              <span class="tag-bar"><span class="tag-fill" [style.--v]="tag.weight / 100"></span></span>
+            </li>
+          }
+        </ul>
+        @if (seed.wikidata.length > 0) {
+          <p class="wikidata" animate.enter="engine-pop">+ Wikidata: {{ seed.wikidata.join(', ') }}</p>
+        }
+      } @else {
+        <p class="reading">Reading tags…</p>
+      }
+    </article>
+  } @empty {
+    <p class="engine-idle">Waiting for the run to start.</p>
+  }
+</div>

@@ -1,0 +1,112 @@
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.tracks {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.track {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-left: 3px solid oklch(65% 0.16 var(--hue));
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 12px;
+  transition:
+    background 200ms,
+    border-color 200ms;
+}
+
+.track[data-flipped='true'] {
+  border-color: var(--accent);
+  border-left-color: oklch(65% 0.16 var(--hue));
+  background: var(--accent-soft);
+}
+
+.number {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.main {
+  display: grid;
+  min-width: 0;
+}
+
+.title,
+.artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title {
+  font-weight: 600;
+}
+
+.artist {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.fits {
+  color: oklch(70% 0.15 85);
+}
+
+.foot {
+  display: grid;
+  gap: 8px;
+}
+
+.flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.value-better {
+  color: var(--good);
+}
+
+.note {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.dry-run {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px dashed var(--accent);
+  border-radius: 8px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.spotify {
+  white-space: normal;
+  text-align: center;
+}

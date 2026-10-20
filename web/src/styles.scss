@@ -179,3 +179,111 @@ input[type='checkbox'] {
   background: var(--surface-hover);
   color: var(--text);
 }
+
+/* Engine view: card copies flying between stations, and their arrow trails (engine/flights.ts). They live in
+   the theatre's fixed layer, outside the board component, so their styles can't be scoped to it. */
+
+.is-flying {
+  z-index: 1;
+  box-shadow:
+    0 10px 30px rgb(0 0 0 / 0.18),
+    0 0 0 2px oklch(70% 0.14 var(--hue, 275) / 0.5);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.trail {
+  fill: none;
+  stroke: oklch(68% 0.15 var(--hue, 275));
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+/* Engine view primitives, shared by its stations and by the copies that fly between them. */
+
+.engine-disc {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: oklch(72% 0.13 var(--hue, 275));
+  color: oklch(22% 0.05 var(--hue, 275));
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.engine-disc-large {
+  width: 38px;
+  height: 38px;
+  font-size: 14px;
+}
+
+.engine-disc-small {
+  width: 18px;
+  height: 18px;
+  font-size: 8px;
+}
+
+.engine-dot {
+  display: inline-block;
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: oklch(65% 0.16 var(--hue, 275));
+}
+
+.engine-idle {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.engine-pop {
+  animation: engine-pop 320ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+@keyframes engine-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@keyframes engine-breathe {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .engine-pop {
+    animation: none;
+  }
+}
+
+/* Following one artist (engine-scene.ts pinState): their cards stand out, every other card fades back. */
+
+[data-artist] {
+  cursor: pointer;
+}
+
+[data-pinned] {
+  transition:
+    opacity 250ms,
+    filter 250ms;
+}
+
+[data-pinned='no'] {
+  opacity: 0.2;
+  filter: grayscale(0.85);
+}
+
+[data-pinned='yes'] {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}

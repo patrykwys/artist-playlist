@@ -30,6 +30,14 @@
   }
 
   @for (item of store.playlists(); track item.id) {
-    <app-playlist-card [playlist]="item" />
+    <app-playlist-card
+      [playlist]="item"
+      [isOpeningReplay]="store.replay()?.playlistId === item.id && !store.replay()?.events"
+      (watch)="store.watch(item.id)"
+    />
   }
 </section>
+
+@if (store.replay()?.events; as events) {
+  <app-engine-theatre [events]="events" (close)="store.closeReplay()" />
+}

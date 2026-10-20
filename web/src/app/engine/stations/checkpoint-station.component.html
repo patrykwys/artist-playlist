@@ -1,0 +1,89 @@
+@let s = scene();
+
+<div class="gate" [attr.data-verdict]="s.gate?.verdict ?? null">
+  <div class="slot">
+    @if (s.gate; as gate) {
+      <span
+        class="token"
+        [style.--hue]="hueOf(gate.artist.name)"
+        [attr.data-flip]="'artist:' + gate.artist.key"
+        [attr.data-artist]="gate.artist.key"
+        [attr.data-pinned]="pinState(pinned(), gate.artist.key)"
+        data-from="anchor:pool"
+      >
+        <span class="engine-disc">{{ initialsOf(gate.artist.name) }}</span>
+        <span class="token-text">
+          <span class="token-name">{{ gate.artist.name }}</span>
+          <span class="token-meta">
+            @if (gate.artist.listeners !== null) {
+              {{ formatCompact(gate.artist.listeners) }} listeners
+            }
+            @if (gate.artist.country) {
+              · {{ gate.artist.country }}
+            }
+          </span>
+        </span>
+      </span>
+    } @else {
+      <span class="engine-idle">{{ s.pool === null ? 'The gate opens after discovery.' : 'Gate closed.' }}</span>
+    }
+  </div>
+  <ul class="lights">
+    @for (gateDef of gates; track gateDef.id) {
+      @let light = s.gate ? s.gate.lights[gateDef.id] : 'off';
+      <li class="light" [attr.data-light]="light">
+        <span class="light-mark">{{ marks[light] }}</span> {{ gateDef.label }}
+      </li>
+    }
+  </ul>
+  <p class="reason" [attr.data-verdict]="s.gate?.verdict ?? null">
+    {{ s.gate ? (s.gate.reason ?? 'passes every filter') : ' ' }}
+  </p>
+</div>
+
+<div class="bins">
+  <div class="bin bin-pass" data-anchor="anchor:shortlist">
+    <p class="bin-head"><span>✓ Shortlist</span><span class="count">{{ s.passed.length }}</span></p>
+    <div class="bin-body" data-scroll>
+      @for (artist of s.passed; track artist.key; let last = $last) {
+        <span
+          class="chip"
+          [style.--hue]="hueOf(artist.name)"
+          [attr.data-flip]="'artist:' + artist.key"
+          [attr.data-artist]="artist.key"
+          [attr.data-pinned]="pinState(pinned(), artist.key)"
+          [attr.data-ranked]="ranked().has(artist.key)"
+          [attr.data-keep-visible]="last ? '' : null"
+          [title]="describe(artist)"
+        >
+          <span class="engine-disc engine-disc-small">{{ initialsOf(artist.name) }}</span>{{ artist.name }}
+        </span>
+      }
+    </div>
+  </div>
+  <div class="bin bin-fail">
+    <p class="bin-head"><span>✕ Rejected</span><span class="count">{{ s.rejected.length }}</span></p>
+    @if (rejectedBy().length > 0) {
+      <p class="tallies">
+        @for (entry of rejectedBy(); track entry[0]) {
+          <span class="tally">{{ entry[0] }} {{ entry[1] }}</span>
+        }
+      </p>
+    }
+    <div class="bin-body" data-scroll>
+      @for (artist of s.rejected; track artist.key; let last = $last) {
+        <span
+          class="chip chip-rejected"
+          [style.--hue]="hueOf(artist.name)"
+          [attr.data-flip]="'artist:' + artist.key"
+          [attr.data-artist]="artist.key"
+          [attr.data-pinned]="pinState(pinned(), artist.key)"
+          [attr.data-keep-visible]="last ? '' : null"
+          [title]="artist.name + ': ' + artist.reason"
+        >
+          <span class="engine-disc engine-disc-small">{{ initialsOf(artist.name) }}</span>{{ artist.name }}
+        </span>
+      }
+    </div>
+  </div>
+</div>

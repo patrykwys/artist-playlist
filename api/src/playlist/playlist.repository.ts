@@ -35,6 +35,14 @@ export type PlaylistTrackReasonRow = {
   reason: string;
 };
 
+/** Mirrors the playlist_trace table. */
+export type PlaylistTraceRow = {
+  playlist_id: string;
+  /** gzip of a JSON TraceEvent[]. */
+  events: Uint8Array;
+  created_at: string;
+};
+
 @Injectable()
 export class PlaylistRepository {
   constructor(private readonly database: DatabaseService) {}
@@ -97,6 +105,36 @@ export class PlaylistRepository {
         );
       }
     });
+  }
+
+  /** Ids of the user's playlists whose generation was recorded. */
+  findTracedIdsByUser(userId: string): string[] {
+    return this.database
+      .all<{ playlist_id: string }>(
+        `SELECT tr.playlist_id FROM playlist_trace tr
+         JOIN playlist p ON p.id = tr.playlist_id
+         WHERE p.user_id = ?`,
+        [userId],
+      )
+      .map((row) => row.playlist_id);
+  }
+
+  /** Only the user's own playlists: the id comes from the URL. */
+  findTrace(userId: string, playlistId: string): PlaylistTraceRow | undefined {
+    return this.database.get<PlaylistTraceRow>(
+      `SELECT tr.* FROM playlist_trace tr
+       JOIN playlist p ON p.id = tr.playlist_id
+       WHERE p.user_id = ? AND tr.playlist_id = ?`,
+      [userId, playlistId],
+    );
+  }
+
+  saveTrace(trace: PlaylistTraceRow): void {
+    this.database.run(
+      `INSERT INTO playlist_trace (playlist_id, events, created_at) VALUES (@playlist_id, @events, @created_at)
+       ON CONFLICT (playlist_id) DO UPDATE SET events = excluded.events, created_at = excluded.created_at`,
+      trace,
+    );
   }
 
   /** For a playlist whose tracks haven't changed: name and cover can still change in Spotify. */

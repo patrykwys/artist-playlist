@@ -4,7 +4,8 @@ import { artistKey, shortlist } from '../engine/scoring.js';
 import { RawTag, TagMap, blockedTagOf, normalizeTag, toTagMap, topRawTags, topTags } from '../engine/tags.js';
 import { Edges, WalkScores, walkScores } from '../engine/walk.js';
 import { LastfmApiService } from '../lastfm/lastfm-api.service.js';
-import { ListenerFilter, PlaylistSeed } from '../models.js';
+import { CheckVerdict, ListenerFilter, PlaylistSeed, TraceSourceKind } from '../models.js';
+import { GenerationTrace, NO_TRACE, TRACE_SAMPLE } from '../playlist/generation-trace.js';
 import { WikidataApiService } from '../wikidata/wikidata-api.service.js';
 import { ArtistCountryService } from './artist-country.service.js';
 
@@ -54,6 +55,9 @@ export interface PoolRequest {
 
 type ArtistFilters = Pick<PoolRequest, 'listeners' | 'countries' | 'blockedGenres'>;
 
+/** Reports one batch of related artists, opening the discovery stage with the first. */
+type SourceReporter = (seed: string, via: TraceSourceKind, through: string, names: readonly string[]) => void;
+
 /** Candidate key → country when a country filter is on (null otherwise). */
 type Shortlist = Map<string, string | null>;
 
@@ -82,25 +86,49 @@ export class CandidatePoolService {
     private readonly artistCountries: ArtistCountryService,
   ) {}
 
-  async gather(request: PoolRequest): Promise<CandidatePool> {
+  async gather(request: PoolRequest, trace: GenerationTrace = NO_TRACE): Promise<CandidatePool> {
     const depth = request.countries.length > 0 ? DEEP_POOL_DEPTH : POOL_DEPTH;
-    const profiled = await Promise.all(request.seeds.map((seed) => this.#profile(seed, depth)));
+    let discovering = false;
+    const reportSource: SourceReporter = (seed, via, through, found) => {
+      if (!discovering) {
+        discovering = true;
+        trace.emit({ type: 'stage', stage: 'discover' });
+      }
+      trace.emit({ type: 'source', seed, via, through, total: found.length, sample: found.slice(0, TRACE_SAMPLE) });
+    };
+    trace.emit({ type: 'stage', stage: 'seeds' });
+    const profiled = await Promise.all(request.seeds.map((seed) => this.#profile(seed, depth, trace, reportSource)));
     const names = new Map(profiled.flatMap((seed) => [...seed.names]));
     const seedKeys = new Set(profiled.flatMap((seed) => (seed.artistName ? [artistKey(seed.artistName)] : [])));
-    const walks = await Promise.all(profiled.map((seed) => this.#walk(seed, seedKeys, names)));
+    const walks = await Promise.all(profiled.map((seed) => this.#walk(seed, seedKeys, names, reportSource)));
 
     // Blocked artists still link others in the walk; they just never become candidates.
     const exclude = new Set([...seedKeys, ...request.blockedArtists.map(artistKey)]);
     const ordering = walks.flatMap((walk) => request.walks.map((kind) => walk[kind]));
+    trace.emit({ type: 'reached', artists: new Set(ordering.flatMap((scores) => [...scores.keys()])).size });
+    trace.emit({ type: 'stage', stage: 'filter' });
+    // Only for the trace: the excluded artists that would otherwise have been among the closest.
+    for (const key of shortlist(ordering, request.perSeed, new Set()).filter((key) => exclude.has(key))) {
+      const verdict: CheckVerdict = seedKeys.has(key) ? 'seed' : 'blocked';
+      const artist = { key, name: names.get(key) ?? key, listeners: null, country: null };
+      trace.emit({ type: 'check', artist, verdict, detail: null });
+    }
 
     const isFiltered = request.listeners !== null || request.countries.length > 0 || request.blockedGenres.length > 0;
     const keys: Shortlist = isFiltered
-      ? await this.#filteredShortlist(ordering, profiled, exclude, names, request)
+      ? await this.#filteredShortlist(ordering, profiled, exclude, names, request, trace)
       : new Map(shortlist(ordering, request.perSeed, exclude).map((key) => [key, null]));
 
     const artists = await Promise.all(
       [...keys].map(([key, country]) => this.#poolArtist(key, names.get(key) ?? key, country)),
     );
+    if (!isFiltered) {
+      // Nothing to filter on: every shortlisted artist passes, now that their listeners are known.
+      for (const { key, name, listeners, country } of artists) {
+        trace.emit({ type: 'check', artist: { key, name, listeners, country }, verdict: 'pass', detail: null });
+      }
+    }
+    trace.emit({ type: 'pool', artists: artists.length });
     const seeds = profiled.map(
       (seed, index): PoolSeed => ({
         label: seed.label,
@@ -122,7 +150,12 @@ export class CandidatePoolService {
     return { seeds, artists };
   }
 
-  async #profile(seed: PlaylistSeed, depth: PoolDepth): Promise<ProfiledSeed> {
+  async #profile(
+    seed: PlaylistSeed,
+    depth: PoolDepth,
+    trace: GenerationTrace,
+    reportSource: SourceReporter,
+  ): Promise<ProfiledSeed> {
     const direct = new Map<string, number>();
     const names = new Map<string, string>();
     const link = (name: string, strength: number): void => {
@@ -135,16 +168,37 @@ export class CandidatePoolService {
 
     if (seed.type === 'genre') {
       const tags = new Map([[normalizeTag(seed.name), 100]]);
+      const profile = [{ name: seed.name, weight: 100 }];
+      trace.emit({ type: 'seed', seed: seed.name, kind: 'genre', tags: profile, listeners: null });
       const artists = await this.lastfm.tagTopArtists(seed.name, depth.genreArtists);
+      reportSource(seed.name, 'genre', seed.name, artists);
       artists.forEach((name, rank) => link(name, rankDiscount(GENRE_PICK_MATCH, rank, artists.length)));
       return { label: seed.name, artistName: null, tags, listeners: null, direct, names };
     }
 
-    const [rawTags, info] = await Promise.all([this.#artistTags(seed.name), this.lastfm.artistInfo(seed.name)]);
+    const [rawTags, info] = await Promise.all([
+      this.#artistTags(seed.name, trace),
+      this.lastfm.artistInfo(seed.name),
+    ]);
+    const tagMap = toTagMap(rawTags);
+    trace.emit({
+      type: 'seed',
+      seed: seed.name,
+      kind: 'artist',
+      tags: topTags(tagMap, TRACE_SAMPLE).map((name) => ({ name, weight: tagMap.get(name) ?? 0 })),
+      listeners: info?.listeners ?? null,
+    });
     const [similar, tagLists] = await Promise.all([
-      this.lastfm.similarArtists(seed.name, depth.similar),
+      this.lastfm.similarArtists(seed.name, depth.similar).then((found) => {
+        reportSource(seed.name, 'similar', seed.name, found.map((artist) => artist.name));
+        return found;
+      }),
       Promise.all(
-        topRawTags(rawTags, POOL_TAGS_PER_SEED).map((tag) => this.lastfm.tagTopArtists(tag, TAG_ARTISTS_LIMIT)),
+        topRawTags(rawTags, POOL_TAGS_PER_SEED).map(async (tag) => {
+          const found = await this.lastfm.tagTopArtists(tag, TAG_ARTISTS_LIMIT);
+          reportSource(seed.name, 'tag', tag, found);
+          return found;
+        }),
       ),
     ]);
     similar.forEach((artist) => link(artist.name, artist.match));
@@ -154,7 +208,7 @@ export class CandidatePoolService {
     return {
       label: seed.name,
       artistName: seed.name,
-      tags: toTagMap(rawTags),
+      tags: tagMap,
       listeners: info?.listeners ?? null,
       direct,
       names,
@@ -162,7 +216,7 @@ export class CandidatePoolService {
   }
 
   /** Last.fm tags, topped up with Wikidata genres when Last.fm has too few to go on. */
-  async #artistTags(artist: string): Promise<RawTag[]> {
+  async #artistTags(artist: string, trace: GenerationTrace): Promise<RawTag[]> {
     const lastfmTags = await this.lastfm.artistTopTags(artist);
     if (toTagMap(lastfmTags).size >= MIN_PROFILE_TAGS) {
       return lastfmTags;
@@ -170,11 +224,17 @@ export class CandidatePoolService {
     const info = await this.lastfm.artistInfo(artist);
     const genres = info?.mbid ? await this.wikidata.genresByMusicBrainzId(info.mbid) : [];
     this.logger.log(`Thin Last.fm tags for ${artist}; added ${genres.length} Wikidata genres`);
+    trace.emit({ type: 'wikidata', seed: artist, genres });
     return [...lastfmTags, ...genres.map((name) => ({ name, count: WIKIDATA_TAG_WEIGHT }))];
   }
 
   /** Reads the similar artists of the seed's closest neighbours, then scores one and two hops out. */
-  async #walk(seed: ProfiledSeed, exclude: ReadonlySet<string>, names: Map<string, string>): Promise<WalkScores> {
+  async #walk(
+    seed: ProfiledSeed,
+    exclude: ReadonlySet<string>,
+    names: Map<string, string>,
+    reportSource: SourceReporter,
+  ): Promise<WalkScores> {
     const closest = [...seed.direct]
       .filter(([key]) => !exclude.has(key))
       .sort((a, b) => b[1] - a[1])
@@ -184,6 +244,7 @@ export class CandidatePoolService {
         closest.map(async ([key]): Promise<[string, Edges]> => {
           const neighbour = names.get(key) ?? key;
           const similar = await this.lastfm.similarArtists(neighbour, SECOND_HOP_SIMILAR);
+          reportSource(seed.label, 'hop', neighbour, similar.map((artist) => artist.name));
           const edges = new Map<string, number>();
           for (const artist of similar) {
             const similarKey = artistKey(artist.name);
@@ -215,6 +276,7 @@ export class CandidatePoolService {
     exclude: ReadonlySet<string>,
     names: Map<string, string>,
     request: PoolRequest,
+    trace: GenerationTrace,
   ): Promise<Shortlist> {
     const pool: Shortlist = new Map();
     const checked = new Set<string>();
@@ -233,7 +295,7 @@ export class CandidatePoolService {
       }
       fresh.forEach((key) => checked.add(key));
       const before = new Map(request.countries.map((country) => [country, countryCount(pool, country)]));
-      for (const [key, country] of await this.#matching(fresh, names, request, new Map())) {
+      for (const [key, country] of await this.#matching(fresh, names, request, new Map(), trace)) {
         pool.set(key, country);
       }
       // Stop once a round found nobody from any country still short: digging deeper rarely reaches them,
@@ -250,7 +312,7 @@ export class CandidatePoolService {
       const seedTags = profiled.map((seed) => seed.tags);
       const discovered = await this.#discoverByCountry(seedTags, short, exclude, names);
       const fresh = [...discovered.keys()].filter((key) => !checked.has(key));
-      for (const [key, country] of await this.#matching(fresh, names, request, discovered)) {
+      for (const [key, country] of await this.#matching(fresh, names, request, discovered, trace)) {
         pool.set(key, country);
       }
     }
@@ -293,6 +355,7 @@ export class CandidatePoolService {
     names: Map<string, string>,
     { listeners, countries, blockedGenres }: ArtistFilters,
     fallbackCountries: ReadonlyMap<string, string>,
+    trace: GenerationTrace,
   ): Promise<Shortlist> {
     const blocked = new Set(blockedGenres.map(normalizeTag));
     const artists = await Promise.all(
@@ -315,9 +378,17 @@ export class CandidatePoolService {
         : (fallbackCountries.get(key) ?? null);
       const inRange = listeners === null || withinRange(info?.listeners ?? 0, listeners);
       const inCountry = countries.length === 0 || (country !== null && countries.includes(country));
-      if (inRange && inCountry && !blockedTagOf(tags, blocked)) {
+      const blockedTag = blockedTagOf(tags, blocked);
+      const verdict: CheckVerdict = !inRange ? 'listeners' : !inCountry ? 'country' : blockedTag ? 'genre' : 'pass';
+      if (verdict === 'pass') {
         kept.set(key, countries.length > 0 ? country : null);
       }
+      trace.emit({
+        type: 'check',
+        artist: { key, name: names.get(key) ?? key, listeners: info?.listeners ?? null, country },
+        verdict,
+        detail: verdict === 'genre' ? blockedTag : null,
+      });
     }
     return kept;
   }

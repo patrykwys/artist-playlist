@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { PlaylistOptions } from '../core/models';
+import { EngineTheatreComponent } from '../engine/engine-theatre.component';
 import { GeneratePanelComponent } from '../playlist/generate-panel.component';
 import { GeneratorStore } from '../playlist/generator.store';
 import { PlaylistCardComponent } from '../playlist/playlist-card.component';
@@ -10,7 +11,14 @@ import { SeedsStore } from '../seeds/seeds.store';
 
 @Component({
   selector: 'app-generator-page',
-  imports: [RouterLink, SeedSearchComponent, SeedListComponent, GeneratePanelComponent, PlaylistCardComponent],
+  imports: [
+    RouterLink,
+    SeedSearchComponent,
+    SeedListComponent,
+    GeneratePanelComponent,
+    PlaylistCardComponent,
+    EngineTheatreComponent,
+  ],
   templateUrl: './generator-page.component.html',
   styleUrl: './generator-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -18,8 +26,11 @@ import { SeedsStore } from '../seeds/seeds.store';
 export class GeneratorPageComponent {
   protected readonly seeds = inject(SeedsStore);
   protected readonly generator = inject(GeneratorStore);
+  /** The Engine view, open over the page: it plays the latest run's trace (see Visualization.md). */
+  protected readonly isWatching = signal(false);
 
   protected generate(options: PlaylistOptions): void {
     this.generator.generate({ ...options, seeds: this.seeds.seeds() });
+    this.isWatching.set(true);
   }
 }
