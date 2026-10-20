@@ -143,4 +143,7 @@ export class GeneratePlaylistDto implements GenerateRequest {
   @Min(0)
   @Max(1)
   deepCuts = 0.3;
+
+  @IsBoolean()
+  dryRun = false;
 }

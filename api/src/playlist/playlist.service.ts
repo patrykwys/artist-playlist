@@ -50,7 +50,7 @@ export class PlaylistService {
     private readonly library: PlaylistLibraryService,
   ) {}
 
-  /** `trace` hears about every step as it happens (see Visualization.md). */
+  /** `trace` hears about every step as it happens (POST /api/playlists/trace, see Visualization.md). */
   async generate(
     session: Session,
     request: GenerateRequest,
@@ -155,6 +155,13 @@ export class PlaylistService {
     const summary =
       `${tracks.length}/${request.length} tracks from ${pool.artists.length} candidates, ` +
       `${fitting} chosen to fit a seed song, in ${Date.now() - startedAt} ms`;
+    if (request.dryRun) {
+      // Nothing in Spotify and nothing stored: the result has no id or link.
+      trace.emit({ type: 'unsaved', name });
+      this.logger.log(`Dry run "${name}": ${summary}`);
+      return made('', '');
+    }
+
     trace.emit({ type: 'stage', stage: 'save' });
     const playlist = await this.spotify.createPlaylist(session, name, buildDescription(request.seeds, request.mode));
     const snapshotId = await this.spotify.addItems(

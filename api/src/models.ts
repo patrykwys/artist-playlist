@@ -54,6 +54,8 @@ export interface GenerateRequest {
   variety: number;
   /** 0 = mostly each artist's hits, 1 = anything from their top 50 tracks. */
   deepCuts: number;
+  /** Do everything but save: no Spotify playlist, nothing stored. For watching the engine work. */
+  dryRun: boolean;
 }
 
 /**
