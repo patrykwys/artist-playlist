@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Session } from '../auth/session.service.js';
 import { UserRepository } from '../auth/user.repository.js';
-import { GeneratedPlaylist, PlaylistSeed, PlaylistTrack } from '../models.js';
+import { GeneratedPlaylist, GeneratedTrack, PlaylistSeed, PlaylistTrack, TrackReason } from '../models.js';
 import { PlaylistEntry, SpotifyApiService } from '../spotify/spotify-api.service.js';
 import { isMadeByApp, parseDescription } from './playlist-description.js';
-import { PlaylistRepository, PlaylistRow, PlaylistTrackRow } from './playlist.repository.js';
+import { PlaylistRepository, PlaylistRow, PlaylistTrackReasonRow, PlaylistTrackRow } from './playlist.repository.js';
 
 /**
  * Your playlists made by this app, served from SQLite.
@@ -25,7 +25,11 @@ export class PlaylistLibraryService {
       await this.sync(session);
     }
     const tracks = groupTracks(this.playlists.findTracksByUser(session.userId));
-    return this.playlists.findByUser(session.userId).map((row) => toModel(row, tracks.get(row.id) ?? []));
+    const reasons = indexReasons(this.playlists.findReasonsByUser(session.userId));
+    return this.playlists.findByUser(session.userId).map((row) => {
+      const reasonOf = (uri: string): TrackReason | null => reasons.get(reasonKey(row.id, uri)) ?? null;
+      return toModel(row, tracks.get(row.id) ?? [], reasonOf);
+    });
   }
 
   /**
@@ -91,6 +95,9 @@ export class PlaylistLibraryService {
         created_at: playlist.createdAt,
       },
       toTrackRows(playlist.id, playlist.tracks),
+      playlist.tracks.flatMap((track) =>
+        track.why ? [{ playlist_id: playlist.id, uri: track.uri, reason: JSON.stringify(track.why) }] : [],
+      ),
     );
   }
 }
@@ -107,14 +114,19 @@ function toTrackRows(playlistId: string, tracks: PlaylistTrack[]): PlaylistTrack
   }));
 }
 
-function toModel(row: PlaylistRow, trackRows: PlaylistTrackRow[]): GeneratedPlaylist {
+function toModel(
+  row: PlaylistRow,
+  trackRows: PlaylistTrackRow[],
+  reasonOf: (uri: string) => TrackReason | null,
+): GeneratedPlaylist {
   const tracks = trackRows.map(
-    (track): PlaylistTrack => ({
+    (track): GeneratedTrack => ({
       uri: track.uri,
       title: track.title,
       artist: track.artist,
       durationMs: track.duration_ms,
       imageUrl: track.image_url,
+      why: reasonOf(track.uri),
     }),
   );
   return {
@@ -136,6 +148,15 @@ function groupTracks(rows: PlaylistTrackRow[]): Map<string, PlaylistTrackRow[]> 
     grouped.set(row.playlist_id, [...(grouped.get(row.playlist_id) ?? []), row]);
   }
   return grouped;
+}
+
+function reasonKey(playlistId: string, uri: string): string {
+  return `${playlistId} ${uri}`;
+}
+
+/** Only this service writes the reason column (JSON of TrackReason), so it is trusted like any other column. */
+function indexReasons(rows: PlaylistTrackReasonRow[]): Map<string, TrackReason> {
+  return new Map(rows.map((row) => [reasonKey(row.playlist_id, row.uri), JSON.parse(row.reason)]));
 }
 
 function earliestAddedAt(entries: PlaylistEntry[]): string | null {

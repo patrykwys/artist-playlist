@@ -8,11 +8,12 @@ import { PlaylistLibraryService } from './playlist-library.service.js';
 import { PlaylistController } from './playlist.controller.js';
 import { PlaylistRepository } from './playlist.repository.js';
 import { PlaylistService } from './playlist.service.js';
+import { TrackFitService } from './track-fit.service.js';
 import { TrackPickerService } from './track-picker.service.js';
 
 @Module({
   imports: [DatabaseModule, AuthModule, SpotifyModule, LastfmModule, RecommenderModule],
   controllers: [PlaylistController],
-  providers: [PlaylistRepository, PlaylistLibraryService, TrackPickerService, PlaylistService],
+  providers: [PlaylistRepository, PlaylistLibraryService, TrackFitService, TrackPickerService, PlaylistService],
 })
 export class PlaylistModule {}

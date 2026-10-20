@@ -144,6 +144,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* "Why this track?": a quiet second line under the title. */
+.track-why {
+  grid-column: 1 / -1;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 @media (max-width: 560px) {
   .playlist-card {
     grid-template-columns: 1fr;

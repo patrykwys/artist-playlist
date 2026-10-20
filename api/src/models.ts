@@ -153,6 +153,23 @@ export interface PlaylistTrack {
   imageUrl: string | null;
 }
 
+/** Why a track is in a playlist: saved when the app generated it, so it can be explained later. */
+export interface TrackReason {
+  /** The seed whose share it fills ("a + b" in Bridge mode); null for a seed artist's own track. */
+  seed: string | null;
+  /** The ranking's parts for the artist (engine/ranking.ts); null for a seed artist. */
+  score: { relevance: number; walk: number; tags: number; popularityGap: number } | null;
+  /** Tags the artist shares with the seed, the most telling (rarest, heaviest) first. */
+  sharedTags: string[];
+  /** "Artist – Title" of a seed song whose listeners also play this one; null when it is a top track. */
+  similarTo: string | null;
+}
+
+/** A track of a playlist this app made; `why` is null for tracks added in Spotify or made before reasons were kept. */
+export interface GeneratedTrack extends PlaylistTrack {
+  why: TrackReason | null;
+}
+
 /** A seed by name only: what the generator uses and what the playlist description remembers (no Spotify ids). */
 export interface PlaylistSeed {
   type: 'artist' | 'genre';
@@ -169,7 +186,7 @@ export interface GeneratedPlaylist {
   mode: MixMode | null;
   seeds: PlaylistSeed[];
   durationMs: number;
-  tracks: PlaylistTrack[];
+  tracks: GeneratedTrack[];
 }
 
 export interface SpotifyUser {
