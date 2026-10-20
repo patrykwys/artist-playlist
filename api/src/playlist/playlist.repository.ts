@@ -27,6 +27,14 @@ export type PlaylistTrackRow = {
   image_url: string | null;
 };
 
+/** Mirrors the playlist_track_reason table. */
+export type PlaylistTrackReasonRow = {
+  playlist_id: string;
+  uri: string;
+  /** JSON TrackReason. */
+  reason: string;
+};
+
 @Injectable()
 export class PlaylistRepository {
   constructor(private readonly database: DatabaseService) {}
@@ -49,8 +57,20 @@ export class PlaylistRepository {
     );
   }
 
-  /** Inserts or updates the playlist and replaces its tracks, in one transaction. */
-  save(playlist: PlaylistRow, tracks: PlaylistTrackRow[]): void {
+  findReasonsByUser(userId: string): PlaylistTrackReasonRow[] {
+    return this.database.all<PlaylistTrackReasonRow>(
+      `SELECT r.* FROM playlist_track_reason r
+       JOIN playlist p ON p.id = r.playlist_id
+       WHERE p.user_id = ?`,
+      [userId],
+    );
+  }
+
+  /**
+   * Inserts or updates the playlist and replaces its tracks, in one transaction. Reasons are only written
+   * when given (a freshly generated playlist); a sync leaves the stored ones alone.
+   */
+  save(playlist: PlaylistRow, tracks: PlaylistTrackRow[], reasons: PlaylistTrackReasonRow[] = []): void {
     this.database.transaction(() => {
       this.database.run(
         `INSERT INTO playlist (id, user_id, name, url, image_url, snapshot_id, mode, seeds, created_at)
@@ -67,6 +87,13 @@ export class PlaylistRepository {
           `INSERT INTO playlist_track (playlist_id, position, uri, title, artist, duration_ms, image_url)
            VALUES (@playlist_id, @position, @uri, @title, @artist, @duration_ms, @image_url)`,
           track,
+        );
+      }
+      for (const reason of reasons) {
+        this.database.run(
+          `INSERT INTO playlist_track_reason (playlist_id, uri, reason) VALUES (@playlist_id, @uri, @reason)
+           ON CONFLICT (playlist_id, uri) DO UPDATE SET reason = excluded.reason`,
+          reason,
         );
       }
     });

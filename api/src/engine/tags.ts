@@ -164,3 +164,26 @@ export function topTags(tags: TagMap, count: number): string[] {
     .slice(0, count)
     .map(([tag]) => tag);
 }
+
+/**
+ * The tags two profiles have in common, the heaviest product of weights first: with TF-IDF weights, the
+ * rare, strongly held tags that best explain why two artists match.
+ */
+export function sharedTags(a: TagMap, b: TagMap, count: number): string[] {
+  return [...a]
+    .flatMap(([tag, weight]): [string, number][] => (b.has(tag) ? [[tag, weight * (b.get(tag) ?? 0)]] : []))
+    .sort((x, y) => y[1] - x[1])
+    .slice(0, count)
+    .map(([tag]) => tag);
+}
+
+/** Several profiles as one: weights summed per tag (the seeds of a Bridge playlist together). */
+export function combineTags(profiles: readonly TagMap[]): Map<string, number> {
+  const combined = new Map<string, number>();
+  for (const profile of profiles) {
+    for (const [tag, weight] of profile) {
+      combined.set(tag, (combined.get(tag) ?? 0) + weight);
+    }
+  }
+  return combined;
+}
