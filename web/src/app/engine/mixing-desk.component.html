@@ -1,0 +1,58 @@
+<aside class="desk" aria-labelledby="desk-title">
+  <header class="head">
+    <h3 id="desk-title" class="title">Mixing desk</h3>
+    <button type="button" class="close" aria-label="Close the mixing desk" (click)="close.emit()">✕</button>
+  </header>
+  <p class="intro">
+    Move a fader to see how each bucket would rank with other weights. Nothing changes in the run; to know whether
+    it is better, measure it in the Algorithm lab.
+  </p>
+
+  <div class="faders">
+    @for (fader of faders; track fader.key) {
+      <label class="fader">
+        <span class="fader-head">
+          <span>{{ fader.label }}</span>
+          <span class="fader-value">{{ weights()[fader.key].toFixed(2) }}</span>
+        </span>
+        <input type="range" step="0.05" [formField]="desk[fader.key]" />
+        <span class="fader-hint">{{ fader.hint }}</span>
+      </label>
+    }
+    <button type="button" class="button button-small" [disabled]="isAsRun()" (click)="reset()">
+      Back to this run’s settings
+    </button>
+  </div>
+
+  <div class="results">
+    @for (bucket of buckets(); track bucket.label) {
+      <section class="bucket" [style.--hue]="bucket.hue">
+        <h4 class="bucket-title">
+          <span class="engine-dot"></span>
+          <span class="bucket-label">{{ bucket.label }}</span>
+          <span class="same" [attr.data-all]="bucket.same === bucket.share">
+            {{ bucket.same }}/{{ bucket.share }} same as the run
+          </span>
+        </h4>
+        <ol class="rows">
+          @for (artist of bucket.rows; track artist.key; let i = $index) {
+            @let moved = move(artist, i);
+            <li class="row" [attr.data-move]="moved.kind" [attr.data-in-share]="i < bucket.share">
+              <span class="rank">{{ i + 1 }}</span>
+              <span class="name">{{ artist.name }}</span>
+              <span class="score">{{ artist.relevance.toFixed(2) }}</span>
+              <span class="move">{{ moved.label }}</span>
+            </li>
+          }
+        </ol>
+      </section>
+    } @empty {
+      <p class="engine-idle">The desk opens once the buckets are scored.</p>
+    }
+  </div>
+
+  <p class="note">
+    Re-ranks the top 40 each bucket was scored with; an artist further down could rise and isn’t shown. The
+    run’s order also puts seed artists first (left out here) and takes country turns when several are picked.
+  </p>
+</aside>

@@ -1,0 +1,274 @@
+.theatre {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg);
+  animation: open 260ms ease-out;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+}
+
+.heading {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.live {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+/* Stage rail */
+
+.stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin: 0;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  list-style: none;
+}
+
+.stage {
+  position: relative;
+  padding: 5px 10px 5px 20px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.stage::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+.stage:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.stage:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.stage[data-state='done'] {
+  color: var(--text);
+}
+
+.stage[data-state='done']::before {
+  border-color: var(--good);
+  background: var(--good);
+}
+
+.stage[data-state='current'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.stage[data-state='current']::before {
+  background: var(--accent);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+/* Controls */
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  background: var(--surface-hover);
+}
+
+.icon-button-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.icon-button-primary:hover {
+  background: var(--accent);
+  filter: brightness(1.08);
+}
+
+.speeds {
+  display: flex;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.speed {
+  min-width: 36px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.speed[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Board and commentary */
+
+.board {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Mixing desk: a drawer over the right-hand stations. */
+
+.desk {
+  position: absolute;
+  z-index: 5;
+  top: 76px;
+  right: 16px;
+  bottom: 16px;
+  width: min(400px, calc(100% - 32px));
+  animation: slide-in 220ms ease-out;
+}
+
+.desk-toggle[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Flights (engine/flights.ts): above everything, never in the way of the mouse. */
+
+.layer {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  pointer-events: none;
+}
+
+.trails {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.arrow-head {
+  fill: var(--accent);
+}
+
+@keyframes open {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+/* Narrow screens: the stations stack, so the whole overlay scrolls. */
+@media (max-width: 1180px) {
+  .theatre {
+    overflow-y: auto;
+  }
+
+  .board {
+    flex: none;
+  }
+
+  .commentary {
+    position: sticky;
+    bottom: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theatre,
+  .live,
+  .stage[data-state='current']::before,
+  .desk {
+    animation: none;
+  }
+}

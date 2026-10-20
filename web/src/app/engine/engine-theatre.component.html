@@ -1,0 +1,124 @@
+<div class="theatre" role="dialog" aria-modal="true" aria-labelledby="engine-title">
+  <header class="bar">
+    <div class="heading">
+      <h2 id="engine-title" class="title">The engine</h2>
+      <p class="status" aria-live="polite">
+        @if (isLive()) {
+          <span class="live">Live</span>
+        }
+        {{ status() }}
+      </p>
+    </div>
+
+    <ol class="stages" aria-label="Jump to a step">
+      @for (stage of stages; track stage.id; let i = $index) {
+        <li>
+          <button
+            type="button"
+            class="stage"
+            [attr.data-state]="stageState(i)"
+            [disabled]="!player.stageSteps().has(stage.id)"
+            (click)="player.jumpTo(stage.id)"
+          >
+            {{ stage.label }}
+          </button>
+        </li>
+      }
+    </ol>
+
+    <div class="controls">
+      <button
+        type="button"
+        class="button button-small desk-toggle"
+        [attr.aria-pressed]="isDeskOpen()"
+        [disabled]="player.scene().ranking.length === 0"
+        title="Re-rank the buckets with other weights (once they are scored)"
+        (click)="isDeskOpen.update((isOpen) => !isOpen)"
+      >
+        Mixing desk
+      </button>
+      <button
+        type="button"
+        class="icon-button"
+        title="Replay from the start"
+        aria-label="Replay"
+        (click)="player.replay()"
+      >
+        ↺
+      </button>
+      <button
+        type="button"
+        class="icon-button icon-button-primary"
+        [attr.aria-label]="player.isPlaying() && !player.isAtEnd() ? 'Pause' : 'Play'"
+        (click)="player.toggle()"
+      >
+        {{ player.isPlaying() && !player.isAtEnd() ? '❚❚' : '▶' }}
+      </button>
+      <div class="speeds" role="group" aria-label="Speed">
+        @for (speed of speeds; track speed) {
+          <button
+            type="button"
+            class="speed"
+            [attr.aria-pressed]="player.speed() === speed"
+            (click)="player.speed.set(speed)"
+          >
+            {{ speed }}×
+          </button>
+        }
+      </div>
+      <button
+        type="button"
+        class="icon-button"
+        title="Skip to the end"
+        aria-label="Skip to the end"
+        (click)="player.skipToEnd()"
+      >
+        ⏭
+      </button>
+      <button
+        #closeButton
+        type="button"
+        class="icon-button"
+        title="Close (Esc)"
+        aria-label="Close"
+        (click)="close.emit()"
+      >
+        ✕
+      </button>
+    </div>
+  </header>
+
+  @if (player.scene().error; as error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  <app-engine-board
+    class="board"
+    [scene]="player.scene()"
+    [isWaiting]="player.isWaiting()"
+    [pinned]="pinnedKey()"
+    (pin)="togglePin($event)"
+  />
+
+  @if (isDeskOpen()) {
+    <app-mixing-desk class="desk" [scene]="player.scene()" (close)="isDeskOpen.set(false)" />
+  }
+
+  <app-engine-commentary
+    class="commentary"
+    [lines]="lines()"
+    [story]="story()"
+    (jump)="jumpTo($event)"
+    (unfollow)="pinned.set(null)"
+  />
+
+  <div #layer class="layer" aria-hidden="true">
+    <svg #trails class="trails">
+      <defs>
+        <marker id="engine-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path class="arrow-head" d="M 0 0 L 10 5 L 0 10 z" />
+        </marker>
+      </defs>
+    </svg>
+  </div>
+</div>
