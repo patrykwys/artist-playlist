@@ -6,6 +6,7 @@ import {
   EvaluationRun,
   GenerateRequest,
   GeneratedPlaylist,
+  GenreSeed,
   SearchResults,
   SpotifyUser,
   StartEvaluation,
@@ -26,6 +27,11 @@ export class ApiService {
 
   search(query: string): Observable<SearchResults> {
     return this.#http.get<SearchResults>('/api/search', { params: { q: query } });
+  }
+
+  /** Genres containing the text, the most listened first: suggestions as you type. */
+  genres(query: string): Observable<GenreSeed[]> {
+    return this.#http.get<GenreSeed[]>('/api/search/genres', { params: { q: query } });
   }
 
   /** Playlists this app has made, newest first, from the API's database. */
