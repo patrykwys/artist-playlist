@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { formatPlaytime, formatTrackLength } from '../core/format';
 import { GeneratedPlaylist } from '../core/models';
 import { describeReason } from './track-reason';
@@ -16,6 +16,10 @@ type CoverLayout = 'grid' | 'single' | 'empty';
 export class PlaylistCardComponent {
   readonly playlist = input.required<GeneratedPlaylist>();
   readonly expanded = input(false);
+  /** Its recording is on its way to the Engine view. */
+  readonly isOpeningReplay = input(false);
+  /** Watch how it was made: shown when the run that made it was recorded. */
+  readonly watch = output<void>();
 
   readonly #albumCovers = computed(() => [
     ...new Set(this.playlist().tracks.flatMap((track) => (track.imageUrl ? [track.imageUrl] : []))),

@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { formatPlaytime } from '../core/format';
+import { EngineTheatreComponent } from '../engine/engine-theatre.component';
 import { PlaylistCardComponent } from '../playlist/playlist-card.component';
 import { PlaylistsStore } from '../playlist/playlists.store';
 
 @Component({
   selector: 'app-playlists-page',
-  imports: [RouterLink, PlaylistCardComponent],
+  imports: [RouterLink, PlaylistCardComponent, EngineTheatreComponent],
   templateUrl: './playlists-page.component.html',
   styleUrl: './playlists-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

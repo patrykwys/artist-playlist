@@ -3,7 +3,8 @@
   gap: 20px;
 }
 
-.pending-card {
+.pending-card,
+.dry-run {
   display: flex;
   align-items: center;
   justify-content: space-between;

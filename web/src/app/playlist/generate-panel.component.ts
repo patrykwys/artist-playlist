@@ -28,6 +28,7 @@ interface GenerateForm {
   blocked: PlaylistSeed[];
   variety: number;
   deepCuts: number;
+  dryRun: boolean;
 }
 
 @Component({
@@ -79,6 +80,7 @@ export class GeneratePanelComponent {
     blocked: [],
     variety: 0.25,
     deepCuts: 0.3,
+    dryRun: false,
   });
 
   protected readonly optionsForm = form(this.options, (path) => {

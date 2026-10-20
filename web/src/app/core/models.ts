@@ -53,6 +53,8 @@ export interface PlaylistOptions {
   variety: number;
   /** 0 = mostly each artist's hits, 1 = anything from their top 50 tracks. */
   deepCuts: number;
+  /** Do everything but save: no Spotify playlist. For watching the engine work. */
+  dryRun: boolean;
 }
 
 export interface GenerateRequest extends PlaylistOptions {
