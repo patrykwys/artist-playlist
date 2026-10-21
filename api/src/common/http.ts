@@ -1,3 +1,5 @@
+import { isInBackground } from './background.js';
+
 export class UpstreamError extends Error {
   constructor(
     readonly service: string,
@@ -73,16 +75,19 @@ export async function fetchJson<T>(
 /**
  * Spaces request start times by a minimum interval, so bursts stay under an API's rate limit. Each API client
  * holds one, and Nest makes the clients singletons, so every caller and every concurrent request shares it.
+ * Work marked `inBackground` (refreshing stale cache entries) only starts when no foreground request is waiting.
  */
 export class RequestQueue {
-  readonly #waiting: (() => void)[] = [];
+  readonly #foreground: (() => void)[] = [];
+  readonly #background: (() => void)[] = [];
   #nextStart = 0;
   #timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly minIntervalMs: number) {}
 
   run<T>(task: () => Promise<T>): Promise<T> {
-    const turn = new Promise<void>((start) => this.#waiting.push(start));
+    const lane = isInBackground() ? this.#background : this.#foreground;
+    const turn = new Promise<void>((start) => lane.push(start));
     this.#pump();
     return turn.then(task);
   }
@@ -92,9 +97,9 @@ export class RequestQueue {
     this.#nextStart = Math.max(this.#nextStart, Date.now() + ms);
   }
 
-  /** Waiting requests: for logs and tests. */
+  /** Waiting requests, foreground and background: for logs and tests. */
   get size(): number {
-    return this.#waiting.length;
+    return this.#foreground.length + this.#background.length;
   }
 
   #pump(): void {
@@ -110,7 +115,7 @@ export class RequestQueue {
       }, wait);
       return;
     }
-    const start = this.#waiting.shift();
+    const start = this.#foreground.shift() ?? this.#background.shift();
     this.#nextStart = Date.now() + this.minIntervalMs;
     start?.();
     this.#pump();
