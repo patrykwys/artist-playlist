@@ -78,7 +78,7 @@ const RATE_LIMIT_PAUSE_MS = 2000;
 export class LastfmApiService {
   // Last.fm asks for no more than ~5 requests a second.
   readonly #queue = new RequestQueue(220);
-  // Stored in SQLite for 7 days (ApiCacheService).
+  // Stored in SQLite: fresh for about 7 days, then served stale while refreshed in the background (ApiCacheService).
   readonly #tags: CachedLoader<RawTag[]>;
   readonly #similar: CachedLoader<SimilarArtist[]>;
   readonly #tagArtists: CachedLoader<string[]>;
