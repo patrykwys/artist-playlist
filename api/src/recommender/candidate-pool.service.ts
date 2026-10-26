@@ -8,6 +8,7 @@ import { CheckVerdict, ListenerFilter, PlaylistSeed, TraceSourceKind } from '../
 import { GenerationTrace, NO_TRACE, TRACE_SAMPLE } from '../playlist/generation-trace.js';
 import { WikidataApiService } from '../wikidata/wikidata-api.service.js';
 import { ArtistCountryService } from './artist-country.service.js';
+import { countryOfTags, nationalTags } from './national-tags.js';
 
 /** How many related artists to read per seed. */
 interface PoolDepth {
@@ -28,9 +29,20 @@ const WIKIDATA_TAG_WEIGHT = 50;
 const SECOND_HOP_NEIGHBOURS = 8;
 const SECOND_HOP_SIMILAR = 50;
 const SECOND_HOP_DAMPING = 0.5;
-/** Per selected country: artists found by the seeds' top tags (one MusicBrainz search per country). */
+/**
+ * Per national tag ("irish hip hop"): its top artists. They are exactly what a country filter asks for, so they
+ * link to the seed at full strength and are checked before anyone else.
+ */
+const NATIONAL_TAG_ARTISTS = 100;
+const NATIONAL_PICK_MATCH = 1;
+/** Per selected country still short at the end: artists MusicBrainz has with the seeds' top tags. */
 const COUNTRY_DISCOVERY_LIMIT = 60;
 const COUNTRY_DISCOVERY_TAGS_PER_SEED = 4;
+/**
+ * With a country filter, the related artists are first probed with this many: a genre's global top artists are
+ * mostly from elsewhere, and a probe that finds nobody from a country still short ends the digging.
+ */
+const WALK_PROBE = 24;
 /** Each lookup is one Last.fm call (cached after); 400 is about 100 s on a first run. */
 const MAX_FILTER_LOOKUPS = 400;
 
@@ -61,6 +73,9 @@ type SourceReporter = (seed: string, via: TraceSourceKind, through: string, name
 /** Candidate key → country when a country filter is on (null otherwise). */
 type Shortlist = Map<string, string | null>;
 
+/** Artist key → the country a national tag ("irish hip hop") placed them in. */
+type Origins = ReadonlyMap<string, string>;
+
 interface ProfiledSeed {
   label: string;
   /** Null for a genre seed. */
@@ -70,6 +85,7 @@ interface ProfiledSeed {
   /** Artist key → link strength: Last.fm similar artists plus the top artists of the seed's tags. */
   direct: Map<string, number>;
   names: Map<string, string>;
+  origins: Origins;
 }
 
 /**
@@ -97,8 +113,11 @@ export class CandidatePoolService {
       trace.emit({ type: 'source', seed, via, through, total: found.length, sample: found.slice(0, TRACE_SAMPLE) });
     };
     trace.emit({ type: 'stage', stage: 'seeds' });
-    const profiled = await Promise.all(request.seeds.map((seed) => this.#profile(seed, depth, trace, reportSource)));
+    const profiled = await Promise.all(
+      request.seeds.map((seed) => this.#profile(seed, depth, request.countries, trace, reportSource)),
+    );
     const names = new Map(profiled.flatMap((seed) => [...seed.names]));
+    const origins = new Map(profiled.flatMap((seed) => [...seed.origins]));
     const seedKeys = new Set(profiled.flatMap((seed) => (seed.artistName ? [artistKey(seed.artistName)] : [])));
     const walks = await Promise.all(profiled.map((seed) => this.#walk(seed, seedKeys, names, reportSource)));
 
@@ -116,7 +135,7 @@ export class CandidatePoolService {
 
     const isFiltered = request.listeners !== null || request.countries.length > 0 || request.blockedGenres.length > 0;
     const keys: Shortlist = isFiltered
-      ? await this.#filteredShortlist(ordering, profiled, exclude, names, request, trace)
+      ? await this.#filteredShortlist(ordering, profiled, exclude, names, origins, request, trace)
       : new Map(shortlist(ordering, request.perSeed, exclude).map((key) => [key, null]));
 
     const artists = await Promise.all(
@@ -153,11 +172,13 @@ export class CandidatePoolService {
   async #profile(
     seed: PlaylistSeed,
     depth: PoolDepth,
+    countries: readonly string[],
     trace: GenerationTrace,
     reportSource: SourceReporter,
   ): Promise<ProfiledSeed> {
     const direct = new Map<string, number>();
     const names = new Map<string, string>();
+    const origins = new Map<string, string>();
     const link = (name: string, strength: number): void => {
       const key = artistKey(name);
       if (key) {
@@ -165,15 +186,41 @@ export class CandidatePoolService {
         direct.set(key, Math.max(direct.get(key) ?? 0, strength));
       }
     };
+    // The countries' own take on the seed's genres: Last.fm's "irish hip hop" lists far more Irish rappers than
+    // MusicBrainz or Wikidata know, and being listed there is what places them in the country.
+    const linkNational = async (genres: readonly string[]): Promise<void> => {
+      const lists = await Promise.all(
+        countries.flatMap((country) =>
+          [...new Set(genres.flatMap((genre) => nationalTags(genre, country)))].map(async (tag) => ({
+            country,
+            tag,
+            found: await this.lastfm.tagTopArtists(tag, NATIONAL_TAG_ARTISTS),
+          })),
+        ),
+      );
+      for (const { country, tag, found } of lists.filter((list) => list.found.length > 0)) {
+        reportSource(seed.name, 'tag', tag, found);
+        found.forEach((name, rank) => {
+          link(name, rankDiscount(NATIONAL_PICK_MATCH, rank, found.length));
+          const key = artistKey(name);
+          if (key && !origins.has(key)) {
+            origins.set(key, country);
+          }
+        });
+      }
+    };
 
     if (seed.type === 'genre') {
       const tags = new Map([[normalizeTag(seed.name), 100]]);
       const profile = [{ name: seed.name, weight: 100 }];
       trace.emit({ type: 'seed', seed: seed.name, kind: 'genre', tags: profile, listeners: null });
-      const artists = await this.lastfm.tagTopArtists(seed.name, depth.genreArtists);
+      const [artists] = await Promise.all([
+        this.lastfm.tagTopArtists(seed.name, depth.genreArtists),
+        linkNational([seed.name]),
+      ]);
       reportSource(seed.name, 'genre', seed.name, artists);
       artists.forEach((name, rank) => link(name, rankDiscount(GENRE_PICK_MATCH, rank, artists.length)));
-      return { label: seed.name, artistName: null, tags, listeners: null, direct, names };
+      return { label: seed.name, artistName: null, tags, listeners: null, direct, names, origins };
     }
 
     const [rawTags, info] = await Promise.all([
@@ -188,18 +235,20 @@ export class CandidatePoolService {
       tags: topTags(tagMap, TRACE_SAMPLE).map((name) => ({ name, weight: tagMap.get(name) ?? 0 })),
       listeners: info?.listeners ?? null,
     });
+    const topSeedTags = topRawTags(rawTags, POOL_TAGS_PER_SEED);
     const [similar, tagLists] = await Promise.all([
       this.lastfm.similarArtists(seed.name, depth.similar).then((found) => {
         reportSource(seed.name, 'similar', seed.name, found.map((artist) => artist.name));
         return found;
       }),
       Promise.all(
-        topRawTags(rawTags, POOL_TAGS_PER_SEED).map(async (tag) => {
+        topSeedTags.map(async (tag) => {
           const found = await this.lastfm.tagTopArtists(tag, TAG_ARTISTS_LIMIT);
           reportSource(seed.name, 'tag', tag, found);
           return found;
         }),
       ),
+      linkNational(topSeedTags),
     ]);
     similar.forEach((artist) => link(artist.name, artist.match));
     tagLists.forEach((list) =>
@@ -212,6 +261,7 @@ export class CandidatePoolService {
       listeners: info?.listeners ?? null,
       direct,
       names,
+      origins,
     };
   }
 
@@ -264,17 +314,20 @@ export class CandidatePoolService {
   }
 
   /**
-   * Related artists that pass the filters. The closest matches are often all small (or all big, or all from
-   * one country), so filtering one shortlist can leave nothing: widen it in rounds until every selected
-   * country (or the pool as a whole) has its share, the related artists run out, or the lookup cap is hit.
-   * A seed's related artists rarely span every country asked for, so countries still short after that are
-   * topped up with artists from there that share the seeds' top tags.
+   * Related artists that pass the filters. With a country filter, the artists national tags placed there go
+   * first: they are what was asked for. Then the related artists, closest first, in rounds that double until
+   * every selected country (or the pool as a whole) has its share, the related artists run out or the lookup cap
+   * is hit. The closest matches are often all small (or all big, or all from one country), which is why one round
+   * is rarely enough. With a country filter the first round is a probe, and a round that finds nobody from a
+   * country still short ends the digging. Countries still short after that are topped up with artists
+   * MusicBrainz has from there with the seeds' top tags.
    */
   async #filteredShortlist(
     ordering: ReadonlyMap<string, number>[],
     profiled: ProfiledSeed[],
     exclude: ReadonlySet<string>,
     names: Map<string, string>,
+    origins: Origins,
     request: PoolRequest,
     trace: GenerationTrace,
   ): Promise<Shortlist> {
@@ -285,97 +338,114 @@ export class CandidatePoolService {
       request.countries.filter((country) => countryCount(pool, country) < perCountry);
     const isFull = (): boolean =>
       request.countries.length === 0 ? pool.size >= request.wanted : shortCountries().length === 0;
+    const check = async (keys: string[]): Promise<void> => {
+      keys.forEach((key) => checked.add(key));
+      for (const [key, country] of await this.#matching(keys, names, request, origins, trace)) {
+        pool.set(key, country);
+      }
+    };
 
-    for (let size = request.perSeed; !isFull() && checked.size < MAX_FILTER_LOOKUPS; size *= 2) {
+    const national = [...origins.keys()].filter((key) => !exclude.has(key)).slice(0, MAX_FILTER_LOOKUPS);
+    if (national.length > 0) {
+      await check(national);
+    }
+    const fromNational = pool.size;
+
+    const isProbing = request.countries.length > 0;
+    for (let size = request.perSeed, round = 0; !isFull() && checked.size < MAX_FILTER_LOOKUPS; size *= 2, round++) {
       const fresh = shortlist(ordering, size, exclude)
         .filter((key) => !checked.has(key))
-        .slice(0, MAX_FILTER_LOOKUPS - checked.size);
+        .slice(0, round === 0 && isProbing ? WALK_PROBE : MAX_FILTER_LOOKUPS - checked.size);
       if (fresh.length === 0) {
         break;
       }
-      fresh.forEach((key) => checked.add(key));
       const before = new Map(request.countries.map((country) => [country, countryCount(pool, country)]));
-      for (const [key, country] of await this.#matching(fresh, names, request, new Map(), trace)) {
-        pool.set(key, country);
-      }
+      await check(fresh);
       // Stop once a round found nobody from any country still short: digging deeper rarely reaches them,
-      // the tag search below does.
+      // the MusicBrainz search below sometimes does.
       const lagging = shortCountries();
       if (lagging.length > 0 && lagging.every((country) => countryCount(pool, country) === before.get(country))) {
         break;
       }
     }
-    const related = pool.size;
+    const related = pool.size - fromNational;
 
     const short = shortCountries();
     if (short.length > 0) {
       const seedTags = profiled.map((seed) => seed.tags);
       const discovered = await this.#discoverByCountry(seedTags, short, exclude, names);
-      const fresh = [...discovered.keys()].filter((key) => !checked.has(key));
-      for (const [key, country] of await this.#matching(fresh, names, request, discovered, trace)) {
-        pool.set(key, country);
-      }
+      await check(discovered.filter((key) => !checked.has(key)));
     }
 
     const byCountry = request.countries.map((country) => `${country} ${countryCount(pool, country)}`).join(', ');
     this.logger.log(
-      `Filters ${describeFilters(request)}: ${related} of ${checked.size} related artists pass, ` +
-        `${pool.size - related} more found by tag${byCountry && ` (${byCountry})`}`,
+      `Filters ${describeFilters(request)}: ${pool.size} of ${checked.size} checked artists pass ` +
+        `(${fromNational} by national tag, ${related} related, ${pool.size - fromNational - related} from ` +
+        `MusicBrainz)${byCountry && `, ${byCountry}`}`,
     );
     return pool;
   }
 
-  /** Artist key → country for artists found per country by the seeds' top tags. Registers their names. */
+  /**
+   * Keys of artists MusicBrainz has from the countries with the seeds' top tags. Registers their names. Their
+   * country still has to be confirmed by the artist Last.fm has under that name, since that one's tracks get picked:
+   * MusicBrainz's Irish "Buckshot" is not the Buckshot whose songs Spotify would find.
+   */
   async #discoverByCountry(
     seedTags: TagMap[],
     countries: string[],
     exclude: ReadonlySet<string>,
     names: Map<string, string>,
-  ): Promise<Map<string, string>> {
+  ): Promise<string[]> {
     const tags = [...new Set(seedTags.flatMap((tagMap) => topTags(tagMap, COUNTRY_DISCOVERY_TAGS_PER_SEED)))];
-    const discovered = new Map<string, string>();
-    for (const [name, country] of await this.artistCountries.byTags(tags, countries, COUNTRY_DISCOVERY_LIMIT)) {
+    const discovered = new Set<string>();
+    for (const name of (await this.artistCountries.byTags(tags, countries, COUNTRY_DISCOVERY_LIMIT)).keys()) {
       const key = artistKey(name);
-      if (key && !exclude.has(key) && !discovered.has(key)) {
-        discovered.set(key, country);
+      if (key && !exclude.has(key)) {
+        discovered.add(key);
         names.set(key, names.get(key) ?? name);
       }
     }
-    return discovered;
+    return [...discovered];
   }
 
   /**
-   * The keys that pass the filters, with their countries. The country comes from the MusicBrainz id Last.fm
-   * has for the name, since that is the artist whose tracks get picked; `fallbackCountries` only covers names
-   * Last.fm has no id for. Unknown listener counts count as 0; an unknown country never passes a country filter.
-   * Blocked genres cost one more Last.fm call per artist (their tags, which every candidate needs anyway).
+   * The keys that pass the filters, with their countries. The country is the one a national tag placed the artist
+   * in, else the one MusicBrainz has for the id Last.fm keeps for the name (that is the artist whose tracks get
+   * picked), else the one the artist's own Last.fm tags name ("irish"). Unknown listener counts count as 0; an
+   * unknown country never passes a country filter. Blocked genres and countries cost one more Last.fm call per
+   * artist (their tags, which every candidate needs anyway).
    */
   async #matching(
     keys: string[],
     names: Map<string, string>,
     { listeners, countries, blockedGenres }: ArtistFilters,
-    fallbackCountries: ReadonlyMap<string, string>,
+    origins: Origins,
     trace: GenerationTrace,
   ): Promise<Shortlist> {
     const blocked = new Set(blockedGenres.map(normalizeTag));
     const artists = await Promise.all(
       keys.map(async (key) => {
         const name = names.get(key) ?? key;
-        const [info, tags] = await Promise.all([
+        const [info, rawTags] = await Promise.all([
           this.lastfm.artistInfo(name),
-          blocked.size > 0 ? this.lastfm.artistTopTags(name) : [],
+          blocked.size > 0 || countries.length > 0 ? this.lastfm.artistTopTags(name) : [],
         ]);
-        return { key, info, tags: toTagMap(tags) };
+        return { key, info, rawTags, tags: toTagMap(rawTags) };
       }),
     );
-    const mbids = countries.length > 0 ? artists.flatMap(({ info }) => (info?.mbid ? [info.mbid] : [])) : [];
+    const mbids =
+      countries.length > 0
+        ? artists.flatMap(({ key, info }) => (info?.mbid && !origins.has(key) ? [info.mbid] : []))
+        : [];
     const countryByMbid = await this.artistCountries.byMusicBrainzId(mbids);
 
     const kept: Shortlist = new Map();
-    for (const { key, info, tags } of artists) {
-      const country = info?.mbid
-        ? (countryByMbid.get(info.mbid.toLowerCase()) ?? null)
-        : (fallbackCountries.get(key) ?? null);
+    for (const { key, info, rawTags, tags } of artists) {
+      const country =
+        origins.get(key) ??
+        (info?.mbid ? countryByMbid.get(info.mbid.toLowerCase()) : undefined) ??
+        (countries.length > 0 ? countryOfTags(rawTags) : null);
       const inRange = listeners === null || withinRange(info?.listeners ?? 0, listeners);
       const inCountry = countries.length === 0 || (country !== null && countries.includes(country));
       const blockedTag = blockedTagOf(tags, blocked);
