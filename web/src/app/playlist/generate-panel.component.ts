@@ -9,8 +9,14 @@ import { BlockSelectComponent } from './block-select.component';
 
 export const MIN_TRACKS = 10;
 export const MAX_TRACKS = 100;
+/** At the edges the listener slider means "no limit". */
 const LISTENERS_FLOOR = 100;
 const LISTENERS_CEILING = 10_000_000;
+/**
+ * Where the minimum starts: Last.fm lists acts that hardly anyone plays (a handful of listeners, often a namesake
+ * or a demo), and Spotify gives apps no listener counts of its own to weed them out with.
+ */
+const DEFAULT_MIN_LISTENERS = 1_000;
 const MAX_COUNTRIES = 20;
 /** At the edges the year slider means "no limit", so older tracks still count with the handle at 1950. */
 const YEARS_FLOOR = 1950;
@@ -50,7 +56,7 @@ export class GeneratePanelComponent {
     parse: parseCompact,
     presets: [
       { label: 'Any', range: { min: LISTENERS_FLOOR, max: LISTENERS_CEILING } },
-      { label: 'Underground (< 50k)', range: { min: LISTENERS_FLOOR, max: 50_000 } },
+      { label: 'Underground (1k–50k)', range: { min: DEFAULT_MIN_LISTENERS, max: 50_000 } },
       { label: 'Mid (50k–1M)', range: { min: 50_000, max: 1_000_000 } },
       { label: 'Big (> 1M)', range: { min: 1_000_000, max: LISTENERS_CEILING } },
     ] satisfies RangePreset[],
@@ -74,7 +80,7 @@ export class GeneratePanelComponent {
     length: 30,
     mode: 'blend',
     includeSeedArtists: true,
-    listeners: { min: LISTENERS_FLOOR, max: LISTENERS_CEILING },
+    listeners: { min: DEFAULT_MIN_LISTENERS, max: LISTENERS_CEILING },
     countries: [],
     releaseYears: { min: YEARS_FLOOR, max: YEARS_CEILING },
     blocked: [],
