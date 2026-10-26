@@ -51,9 +51,10 @@ export function narrate(scene: Scene, event: TraceEvent): (Pick<LogLine, 'text' 
       const listeners = event.listeners === null ? '' : ` · ${formatCompact(event.listeners)} listeners`;
       return { text: `${event.seed}: ${tags || 'no tags'}${listeners}`, tone: 'info', about: [artistKey(event.seed)] };
     }
-    case 'wikidata':
+    case 'wikidata': {
       const genres = event.genres.join(', ') || 'nothing';
       return { text: `${event.seed} had few tags, Wikidata added ${genres}`, tone: 'info' };
+    }
     case 'source':
       return {
         text: describeSource(event.via, event.through, event.total),
