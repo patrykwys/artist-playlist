@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { formatCompact } from '../../core/format';
-import { hueOf, initialsOf, pinState } from '../artists';
+import { ArtistDiscComponent } from '../artist-disc.component';
+import { ArtistHuePipe } from '../artist-hue.pipe';
+import { pinState } from '../artists';
 import { GATES, Light, Scene, SceneArtist } from '../scene.model';
 
 const LIGHT_MARKS: Record<Light, string> = { off: 'off', pass: '✓', fail: '✕', skip: '–' };
@@ -11,6 +13,7 @@ const LIGHT_MARKS: Record<Light, string> = { off: 'off', pass: '✓', fail: '✕
  */
 @Component({
   selector: 'app-checkpoint-station',
+  imports: [ArtistDiscComponent, ArtistHuePipe],
   templateUrl: './checkpoint-station.component.html',
   styleUrl: './checkpoint-station.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -22,8 +25,6 @@ export class CheckpointStationComponent {
 
   protected readonly gates = GATES;
   protected readonly marks = LIGHT_MARKS;
-  protected readonly hueOf = hueOf;
-  protected readonly initialsOf = initialsOf;
   protected readonly formatCompact = formatCompact;
   protected readonly pinState = pinState;
 

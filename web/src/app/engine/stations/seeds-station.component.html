@@ -8,7 +8,7 @@
       [attr.data-pinned]="pinState(pinned(), artistKey(seed.label))"
     >
       <div class="seed-head">
-        <span class="engine-disc engine-disc-large">{{ initialsOf(seed.label) }}</span>
+        <app-artist-disc size="large" [name]="seed.label" />
         <div>
           <p class="seed-name">{{ seed.label }}</p>
           <p class="seed-meta">
