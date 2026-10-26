@@ -1,3 +1,5 @@
+import type { TagMap } from '../engine/tags.js';
+
 /**
  * How Last.fm listeners tag music by where it is from ("irish hip hop", "polish rap", "uk garage"), by ISO 3166-1
  * alpha-2 code, the most used word first. Countries missing here are only found through MusicBrainz.
@@ -92,6 +94,18 @@ export function countryOfTags(tags: readonly { name: string; count: number }[]):
     .filter((tag) => tag.count >= OWN_TAG_MIN_WEIGHT && COUNTRY_BY_DEMONYM.has(tag.name.trim().toLowerCase()))
     .sort((a, b) => b.count - a.count);
   return named.length > 0 ? (COUNTRY_BY_DEMONYM.get(named[0].name.trim().toLowerCase()) ?? null) : null;
+}
+
+/**
+ * Whether `genre` (normalised) is what the artist is mainly tagged with: no tag outweighs the strongest one that
+ * names it ("hip hop", "irish hip hop", "underground hip hop" all name hip hop). Kojaque's hip hop (100) is;
+ * Intox's irish hip hop (66) is not, under hardcore punk (100).
+ */
+export function isMainlyTagged(tags: TagMap, genre: string): boolean {
+  const names = new RegExp(`(^| )${genre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( |$)`);
+  const strongest = Math.max(0, ...tags.values());
+  const genreWeight = Math.max(0, ...[...tags].filter(([tag]) => names.test(tag)).map(([, weight]) => weight));
+  return genreWeight > 0 && genreWeight >= strongest;
 }
 
 /**
