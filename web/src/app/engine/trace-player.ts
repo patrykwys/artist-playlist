@@ -1,6 +1,7 @@
 import { DestroyRef, Signal, computed, effect, inject, signal, untracked } from '@angular/core';
 import { TraceEvent, TraceStage } from '../core/models';
-import { Scene, applyEvent, emptyScene, sceneAt } from './engine-scene';
+import { Scene } from './scene.model';
+import { applyEvent, emptyScene, sceneAt } from './scene.reducer';
 
 /** How long each kind of event stays on screen at 1×, before the next one, in ms. */
 const SHOW_MS: Record<TraceEvent['type'], number> = {

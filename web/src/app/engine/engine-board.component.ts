@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { TraceStage } from '../core/models';
-import { Scene } from './engine-scene';
+import { Scene } from './scene.model';
 import { BucketsStationComponent } from './stations/buckets-station.component';
 import { CheckpointStationComponent } from './stations/checkpoint-station.component';
 import { DiscoveryStationComponent } from './stations/discovery-station.component';

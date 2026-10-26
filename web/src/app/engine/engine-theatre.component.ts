@@ -16,9 +16,10 @@ import {
 import { TraceEvent, TraceStage } from '../core/models';
 import { EngineBoardComponent } from './engine-board.component';
 import { EngineCommentaryComponent } from './engine-commentary.component';
-import { STAGE_TITLES, Story, storyOf } from './engine-scene';
+import { Story, storyOf } from './artist-story';
 import { Flights } from './flights';
 import { MixingDeskComponent } from './mixing-desk.component';
+import { STAGE_TITLES } from './scene.model';
 import { SPEEDS, TracePlayer } from './trace-player';
 
 const STAGES: { id: TraceStage; label: string }[] = [

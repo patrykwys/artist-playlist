@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { BucketArtist, Scene, SceneBucket, hueOf, initialsOf, pinState } from '../engine-scene';
+import { hueOf, initialsOf, pinState } from '../artists';
+import { BucketArtist, Scene, SceneBucket } from '../scene.model';
 
 /** Rows shown before track picking; the list then grows to stay a few rows ahead of the cursor. */
 const ROWS = 10;

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { formatCompact } from '../../core/format';
-import { GATES, Light, Scene, SceneArtist, hueOf, initialsOf, pinState } from '../engine-scene';
+import { hueOf, initialsOf, pinState } from '../artists';
+import { GATES, Light, Scene, SceneArtist } from '../scene.model';
 
 const LIGHT_MARKS: Record<Light, string> = { off: 'off', pass: '✓', fail: '✕', skip: '–' };
 

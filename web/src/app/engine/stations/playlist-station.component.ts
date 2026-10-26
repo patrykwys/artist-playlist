@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { Scene, pinState } from '../engine-scene';
+import { pinState } from '../artists';
+import { Scene } from '../scene.model';
 
 /**
  * Station 5: tracks arrive as they are found, then the greedy chain and each 2-opt reversal reorder them while

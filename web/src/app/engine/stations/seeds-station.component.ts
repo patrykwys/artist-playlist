@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { formatCompact } from '../../core/format';
-import { Scene, artistKey, initialsOf, pinState } from '../engine-scene';
+import { artistKey, initialsOf, pinState } from '../artists';
+import { Scene } from '../scene.model';
 
 /** Station 1: each seed and the tags that describe it (Last.fm, topped up by Wikidata). */
 @Component({
