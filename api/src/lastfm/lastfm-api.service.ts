@@ -29,7 +29,21 @@ export interface ArtistInfo {
   name: string;
   mbid: string | null;
   listeners: number;
+  /**
+   * The page says several artists share the name ("There are two artists by this name"): its tags, top tracks
+   * and MusicBrainz id may each belong to a different one of them.
+   */
+  isShared: boolean;
 }
+
+/**
+ * How Last.fm bios open a page that several artists share: "There are two artists by this name", "There are
+ * multiple artists tracked as …", or straight into a numbered list ("1) Nugget are a punk group … 2) …").
+ */
+const SHARED_PAGE = [
+  /there (?:are|is) (?:more than one|multiple|several|many|two|three|four|five|six|seven|eight|nine|ten|\d+) (?:different )?(?:artists?|bands|groups|acts|musicians)/i,
+  /^\s*1\)[\s\S]*\s2\)/,
+];
 
 interface LastfmError {
   error: number;
@@ -59,7 +73,7 @@ interface SimilarTracksResponse {
 }
 
 interface ArtistInfoResponse {
-  artist?: { name: string; mbid?: string; stats?: { listeners?: number | string } };
+  artist?: { name: string; mbid?: string; stats?: { listeners?: number | string }; bio?: { summary?: string } };
 }
 
 interface TagInfoResponse {
@@ -98,7 +112,8 @@ export class LastfmApiService {
     // v2: entries became { title, listeners } instead of titles.
     this.#topTracks = cache.loader('lastfm:top-tracks:v2', CACHE_TTL_MS);
     this.#similarTracks = cache.loader('lastfm:similar-tracks', CACHE_TTL_MS);
-    this.#info = cache.loader('lastfm:artist-info', CACHE_TTL_MS);
+    // v3: entries say whether several artists share the page.
+    this.#info = cache.loader('lastfm:artist-info:v3', CACHE_TTL_MS);
     this.#tagInfo = cache.loader('lastfm:tag-info', CACHE_TTL_MS);
     this.#topTags = cache.loader('lastfm:top-tags', CACHE_TTL_MS);
   }
@@ -164,7 +179,12 @@ export class LastfmApiService {
       const response = await this.#call<ArtistInfoResponse>('artist.getInfo', { artist, autocorrect: '1' });
       const info = response?.artist;
       return info
-        ? { name: info.name, mbid: info.mbid || null, listeners: Number(info.stats?.listeners ?? 0) }
+        ? {
+            name: info.name,
+            mbid: info.mbid || null,
+            listeners: Number(info.stats?.listeners ?? 0),
+            isShared: isSharedPage(info.bio?.summary ?? ''),
+          }
         : null;
     });
   }
@@ -210,6 +230,12 @@ export class LastfmApiService {
     }
     return body;
   }
+}
+
+/** Whether an artist bio says several artists share the page (only its opening says so). */
+export function isSharedPage(bio: string): boolean {
+  const opening = bio.slice(0, 600);
+  return SHARED_PAGE.some((pattern) => pattern.test(opening));
 }
 
 function key(name: string, limit?: number): string {
