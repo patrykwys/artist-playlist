@@ -14,13 +14,13 @@ import {
   viewChild,
 } from '@angular/core';
 import { TraceEvent, TraceStage } from '../core/models';
+import { Story, storyOf } from './artist-story';
 import { EngineBoardComponent } from './engine-board.component';
 import { EngineCommentaryComponent } from './engine-commentary.component';
-import { Story, storyOf } from './artist-story';
 import { Flights } from './flights';
 import { MixingDeskComponent } from './mixing-desk.component';
 import { STAGE_TITLES } from './scene.model';
-import { SPEEDS, TracePlayer } from './trace-player';
+import { SPEEDS, TracePlayerStore } from './trace-player.store';
 
 const STAGES: { id: TraceStage; label: string }[] = [
   { id: 'seeds', label: 'Seeds' },
@@ -43,6 +43,7 @@ const STAGES: { id: TraceStage; label: string }[] = [
   templateUrl: './engine-theatre.component.html',
   styleUrl: './engine-theatre.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [TracePlayerStore],
   host: { '(document:keydown.escape)': 'escape()' },
 })
 export class EngineTheatreComponent {
@@ -62,7 +63,7 @@ export class EngineTheatreComponent {
     () => this.layer()?.nativeElement,
     () => this.trails()?.nativeElement,
   );
-  protected readonly player = new TracePlayer(this.events, this.isLive, () => this.#prepareFlights());
+  protected readonly player = inject(TracePlayerStore);
   protected readonly speeds = SPEEDS;
   protected readonly stages = STAGES;
 
@@ -101,6 +102,8 @@ export class EngineTheatreComponent {
   });
 
   constructor() {
+    this.player.play(computed(() => ({ events: this.events(), isLive: this.isLive() })));
+    this.player.onStep(() => this.#prepareFlights());
     // The page behind stays put while the overlay is open.
     const body = inject(DOCUMENT).body;
     const overflow = body.style.overflow;
@@ -125,7 +128,7 @@ export class EngineTheatreComponent {
 
   /** A commentary line shows the floor as it was when the line was written, paused there. */
   protected jumpTo(step: number): void {
-    this.player.isPlaying.set(false);
+    this.player.pause();
     this.player.seek(step + 1);
   }
 

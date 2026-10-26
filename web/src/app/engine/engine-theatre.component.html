@@ -60,7 +60,7 @@
             type="button"
             class="speed"
             [attr.aria-pressed]="player.speed() === speed"
-            (click)="player.speed.set(speed)"
+            (click)="player.setSpeed(speed)"
           >
             {{ speed }}×
           </button>
