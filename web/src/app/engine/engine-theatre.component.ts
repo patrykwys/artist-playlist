@@ -17,7 +17,7 @@ import { TraceEvent, TraceStage } from '../core/models';
 import { Story, storyOf } from './artist-story';
 import { EngineBoardComponent } from './engine-board.component';
 import { EngineCommentaryComponent } from './engine-commentary.component';
-import { Flights } from './flights';
+import { FlightLayerComponent } from './flight-layer.component';
 import { MixingDeskComponent } from './mixing-desk.component';
 import { STAGE_TITLES } from './scene.model';
 import { SPEEDS, TracePlayerStore } from './trace-player.store';
@@ -39,7 +39,7 @@ const STAGES: { id: TraceStage; label: string }[] = [
  */
 @Component({
   selector: 'app-engine-theatre',
-  imports: [EngineBoardComponent, EngineCommentaryComponent, MixingDeskComponent],
+  imports: [EngineBoardComponent, EngineCommentaryComponent, FlightLayerComponent, MixingDeskComponent],
   templateUrl: './engine-theatre.component.html',
   styleUrl: './engine-theatre.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -54,15 +54,9 @@ export class EngineTheatreComponent {
 
   readonly #injector = inject(Injector);
   private readonly board = viewChild(EngineBoardComponent, { read: ElementRef<HTMLElement> });
-  private readonly layer = viewChild<ElementRef<HTMLElement>>('layer');
-  private readonly trails = viewChild<ElementRef<SVGSVGElement>>('trails');
+  private readonly flights = viewChild.required(FlightLayerComponent);
   private readonly closeButton = viewChild<ElementRef<HTMLButtonElement>>('closeButton');
 
-  readonly #flights = new Flights(
-    () => this.board()?.nativeElement,
-    () => this.layer()?.nativeElement,
-    () => this.trails()?.nativeElement,
-  );
   protected readonly player = inject(TracePlayerStore);
   protected readonly speeds = SPEEDS;
   protected readonly stages = STAGES;
@@ -145,7 +139,12 @@ export class EngineTheatreComponent {
 
   /** Measures the cards before a step, and flies the ones that moved once Angular has rendered it. */
   #prepareFlights(): void {
-    const before = this.#flights.measure();
-    afterNextRender({ read: () => this.#flights.fly(before, this.player.speed()) }, { injector: this.#injector });
+    const root = this.board()?.nativeElement;
+    if (!root) {
+      return;
+    }
+    const flights = this.flights();
+    const before = flights.measure(root);
+    afterNextRender({ read: () => flights.fly(root, before, this.player.speed()) }, { injector: this.#injector });
   }
 }

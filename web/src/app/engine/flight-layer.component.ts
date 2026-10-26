@@ -1,11 +1,5 @@
-/**
- * Cards that move between stations fly there (FLIP). Before a step the view measures every card marked
- * `data-flip="key"` and every station anchor marked `data-anchor="key"`. After Angular renders the step, each card
- * that moved, or that is new and names where it came from in `data-from` (keys separated by spaces, the first
- * one measured wins), gets a copy that flies from the old place to the new one along an arc, with an arrow trail.
- * The copies live in a fixed layer, so stations that scroll or clip don't cut them off. The real card stays
- * hidden until its copy lands.
- */
+import { ChangeDetectionStrategy, Component, ElementRef, inject, viewChild } from '@angular/core';
+
 /** Where a card was, and how far its station was scrolled then, so scrolling alone doesn't count as moving. */
 export interface Measured {
   rect: DOMRect;
@@ -13,20 +7,60 @@ export interface Measured {
   scrollTop: number;
 }
 
-export class Flights {
+/**
+ * Cards that move between stations fly there (FLIP). Before a step the view measures every card marked
+ * `data-flip="key"` and every station anchor marked `data-anchor="key"`. After Angular renders the step, each card
+ * that moved, or that is new and names where it came from in `data-from` (keys separated by spaces, the first
+ * one measured wins), gets a copy that flies from the old place to the new one along an arc, with an arrow trail.
+ * The copies live in this fixed layer, so stations that scroll or clip don't cut them off. The real card stays
+ * hidden until its copy lands. Copies and trails are styled globally (`.is-flying`, `.trail`): they are made
+ * outside Angular's templates.
+ */
+@Component({
+  selector: 'app-flight-layer',
+  template: `
+    <svg #trails class="trails">
+      <defs>
+        <marker id="engine-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path class="arrow-head" d="M 0 0 L 10 5 L 0 10 z" />
+        </marker>
+      </defs>
+    </svg>
+  `,
+  styles: `
+    :host {
+      position: fixed;
+      z-index: 60;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .trails {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .arrow-head {
+      fill: var(--accent);
+    }
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { 'aria-hidden': 'true' },
+})
+export class FlightLayerComponent {
+  readonly #layer: HTMLElement = inject(ElementRef).nativeElement;
+  private readonly trails = viewChild.required<ElementRef<SVGSVGElement>>('trails');
+
   readonly #inFlight = new Map<string, { copy: HTMLElement; animation: Animation }>();
   readonly #reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)') ?? { matches: true };
 
-  constructor(
-    private readonly root: () => HTMLElement | undefined,
-    private readonly layer: () => HTMLElement | undefined,
-    private readonly trails: () => SVGSVGElement | undefined,
-  ) {}
-
-  /** Where every card and anchor is now; cards scrolled out of their station's view are left out. */
-  measure(): Map<string, Measured> {
+  /** Where every card and anchor in `root` is now; cards scrolled out of their station's view are left out. */
+  measure(root: HTMLElement): Map<string, Measured> {
     const rects = new Map<string, Measured>();
-    for (const element of this.root()?.querySelectorAll<HTMLElement>('[data-flip], [data-anchor]') ?? []) {
+    for (const element of root.querySelectorAll<HTMLElement>('[data-flip], [data-anchor]')) {
       const key = element.dataset['flip'] ?? element.dataset['anchor'];
       if (!key) {
         continue;
@@ -40,10 +74,9 @@ export class Flights {
     return rects;
   }
 
-  /** Flies every card that moved since `before` was measured. `speed` shortens flights at higher speeds. */
-  fly(before: Map<string, Measured>, speed: number): void {
-    const root = this.root();
-    if (!root || this.#reducedMotion.matches) {
+  /** Flies every card in `root` that moved since `before` was measured. `speed` shortens flights at higher speeds. */
+  fly(root: HTMLElement, before: Map<string, Measured>, speed: number): void {
+    if (this.#reducedMotion.matches) {
       return;
     }
     // Bring the newest cards into view first, so they are seen landing.
@@ -62,10 +95,6 @@ export class Flights {
   }
 
   #launch(key: string, element: HTMLElement, from: DOMRect, to: DOMRect, speed: number): void {
-    const layer = this.layer();
-    if (!layer) {
-      return;
-    }
     this.#inFlight.get(key)?.animation.cancel();
 
     const copy = element.cloneNode(true) as HTMLElement;
@@ -80,7 +109,7 @@ export class Flights {
       height: `${to.height}px`,
       margin: '0',
     });
-    layer.append(copy);
+    this.#layer.append(copy);
     element.style.visibility = 'hidden';
 
     const dx = from.left - to.left;
@@ -119,8 +148,8 @@ export class Flights {
 
   /** An arrow drawn along the flight path, then faded. */
   #trail(from: DOMRect, to: DOMRect, lift: number, duration: number, hue: string): void {
-    const svg = this.trails();
-    if (!svg || svg.childElementCount > 40) {
+    const svg = this.trails().nativeElement;
+    if (svg.childElementCount > 40) {
       return;
     }
     const x1 = from.left + from.width / 2;
