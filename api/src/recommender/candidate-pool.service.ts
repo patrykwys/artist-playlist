@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CandidatePool, PoolArtist, PoolSeed } from '../engine/ranking.js';
 import { artistKey, shortlist } from '../engine/scoring.js';
+import { median } from '../engine/stats.js';
 import { RawTag, TagMap, blockedTagOf, normalizeTag, toTagMap, topRawTags, topTags } from '../engine/tags.js';
 import { Edges, WalkScores, walkScores } from '../engine/walk.js';
 import { LastfmApiService } from '../lastfm/lastfm-api.service.js';
@@ -173,6 +174,7 @@ export class CandidatePoolService {
           : null,
         tags: seed.tags,
         listeners: seed.listeners,
+        sizeReference: seed.artistName ? null : typicalSize(artists, walks[index]),
         oneHop: walks[index].oneHop,
         twoHop: walks[index].twoHop,
       }),
@@ -485,6 +487,14 @@ export class CandidatePoolService {
     }
     return kept;
   }
+}
+
+/** The median Last.fm listeners of the candidates a seed's walk reached; null when none has a count. */
+function typicalSize(artists: readonly PoolArtist[], walk: WalkScores): number | null {
+  const sizes = artists.flatMap(({ key, listeners }) =>
+    listeners !== null && (walk.oneHop.has(key) || walk.twoHop.has(key)) ? [listeners] : [],
+  );
+  return sizes.length > 0 ? median(sizes) : null;
 }
 
 /** Rank 0 gets the full base strength, the last rank half of it. */
