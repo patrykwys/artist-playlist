@@ -35,9 +35,17 @@ export class AuthController {
       return;
     }
 
-    const tokens = await this.spotifyAuth.exchangeCode(code);
-    const user = await this.spotifyAuth.profile(tokens.accessToken);
-    const cookieValue = this.sessions.create(user, tokens);
+    // The browser is on this page, not the app: a failure here goes back to the app's message, not a JSON error.
+    let cookieValue: string;
+    try {
+      const tokens = await this.spotifyAuth.exchangeCode(code);
+      const user = await this.spotifyAuth.profile(tokens.accessToken);
+      cookieValue = this.sessions.create(user, tokens);
+    } catch (failure) {
+      this.logger.warn(`Spotify login failed: ${failure instanceof Error ? failure.message : String(failure)}`);
+      response.redirect(`${this.config.appUrl}/?login=failed`);
+      return;
+    }
     response.cookie(SESSION_COOKIE, cookieValue, {
       httpOnly: true,
       sameSite: 'lax',
