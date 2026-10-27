@@ -7,7 +7,7 @@
   gap: 12px;
   padding: 16px;
   background: var(--bg);
-  animation: open 260ms ease-out;
+  animation: open 260ms var(--ease-out);
 }
 
 .bar {
@@ -76,6 +76,11 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+
+.stage:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .stage::before {
@@ -139,6 +144,11 @@
   font: inherit;
   font-size: 15px;
   cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+
+.icon-button:active {
+  transform: scale(0.94);
 }
 
 .icon-button:hover {
@@ -175,6 +185,11 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+
+.speed:active {
+  transform: scale(0.94);
 }
 
 .speed[aria-pressed='true'] {
@@ -198,7 +213,7 @@
   right: 16px;
   bottom: 16px;
   width: min(400px, calc(100% - 32px));
-  animation: slide-in 220ms ease-out;
+  animation: slide-in 220ms var(--ease-out);
 }
 
 .desk-toggle[aria-pressed='true'] {
@@ -249,5 +264,17 @@
   .stage[data-state='current']::before,
   .desk {
     animation: none;
+  }
+
+  .stage,
+  .icon-button,
+  .speed {
+    transition: none;
+  }
+
+  .stage:active,
+  .icon-button:active,
+  .speed:active {
+    transform: none;
   }
 }

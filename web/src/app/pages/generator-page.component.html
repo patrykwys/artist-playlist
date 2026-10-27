@@ -28,21 +28,21 @@
   </section>
 
   @if (generator.isLoading()) {
-    <div class="pending-card">
+    <div class="pending-card" animate.enter="fade-in">
       Building your playlist…
       <button type="button" class="button button-small" (click)="isWatching.set(true)">Watch the engine</button>
     </div>
   }
 
   @if (generator.isDryRun() && !generator.isLoading() && !generator.hasError() && generator.trace().length > 0) {
-    <div class="dry-run">
+    <div class="dry-run" animate.enter="fade-in">
       Dry run done: nothing was saved to Spotify. Your seeds are still here to try again.
       <button type="button" class="button button-small" (click)="isWatching.set(true)">Watch it again</button>
     </div>
   }
 
   @if (generator.latest(); as latest) {
-    <section class="latest">
+    <section class="latest" animate.enter="arrive">
       <div class="latest-head">
         <h2 class="section-title">Just created</h2>
         <a class="latest-link" routerLink="/playlists">All my playlists →</a>

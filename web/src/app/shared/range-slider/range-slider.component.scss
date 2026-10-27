@@ -131,6 +131,21 @@
   font: inherit;
   font-size: 13px;
   cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+
+.range-preset:active {
+  transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .range-preset {
+    transition: none;
+  }
+
+  .range-preset:active {
+    transform: none;
+  }
 }
 
 .range-preset:hover {

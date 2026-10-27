@@ -104,7 +104,7 @@
   border-color: var(--danger);
   background: var(--danger-soft);
   color: var(--danger);
-  animation: flash 500ms ease-out;
+  animation: flash 500ms var(--ease-out);
 }
 
 .reason {

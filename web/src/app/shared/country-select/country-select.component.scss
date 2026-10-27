@@ -67,6 +67,31 @@
   border-radius: 8px;
   background: var(--surface);
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);
+  /* Opens out of the trigger above it. Closing stays instant. */
+  transform-origin: top center;
+}
+
+.menu-in {
+  animation: menu-in 200ms var(--ease-out);
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-in {
+    animation-name: menu-fade-in;
+  }
+}
+
+@keyframes menu-fade-in {
+  from {
+    opacity: 0;
+  }
 }
 
 .option {

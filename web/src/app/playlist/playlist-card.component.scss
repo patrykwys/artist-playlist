@@ -115,6 +115,33 @@
   cursor: pointer;
 }
 
+/* The track list unfolds instead of snapping open. Browsers without ::details-content or interpolate-size
+   just open it instantly, as before. */
+.tracks {
+  interpolate-size: allow-keywords;
+}
+
+.tracks::details-content {
+  block-size: 0;
+  overflow: clip;
+  opacity: 0;
+  transition:
+    block-size 250ms var(--ease-out),
+    opacity 250ms var(--ease-out),
+    content-visibility 250ms allow-discrete;
+}
+
+.tracks[open]::details-content {
+  block-size: auto;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tracks::details-content {
+    transition: none;
+  }
+}
+
 .track-list {
   margin: 8px 0 0;
   padding-left: 28px;

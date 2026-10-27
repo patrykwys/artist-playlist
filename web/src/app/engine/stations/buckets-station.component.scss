@@ -44,13 +44,14 @@
   background: var(--border);
 }
 
+/* Filled by clipping a full-width bar, not by growing its width: clip-path skips layout on every frame. */
 .level {
   display: block;
-  width: calc(min(var(--v), 1) * 100%);
   height: 100%;
   border-radius: inherit;
   background: oklch(65% 0.16 var(--hue));
-  transition: width 400ms ease-out;
+  clip-path: inset(0 calc((1 - min(var(--v), 1)) * 100%) 0 0 round 3px);
+  transition: clip-path 300ms var(--ease-out);
 }
 
 .rows {
@@ -218,5 +219,9 @@
 @media (prefers-reduced-motion: reduce) {
   .row .status::before {
     animation: none;
+  }
+
+  .level {
+    transition: none;
   }
 }

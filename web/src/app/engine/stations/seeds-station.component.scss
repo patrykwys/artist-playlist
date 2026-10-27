@@ -75,7 +75,7 @@
   border-radius: inherit;
   background: oklch(65% 0.16 var(--hue));
   transform-origin: left;
-  animation: grow 700ms ease-out;
+  animation: grow 700ms var(--ease-out);
 }
 
 @keyframes grow {

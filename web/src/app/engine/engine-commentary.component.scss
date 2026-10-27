@@ -7,7 +7,7 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
-  transition: height 250ms ease-out;
+  transition: height 250ms var(--ease-out);
 }
 
 :host([data-open='true']) {
@@ -176,7 +176,7 @@
 }
 
 .line-in {
-  animation: line-in 260ms ease-out;
+  animation: line-in 260ms var(--ease-out);
 }
 
 @keyframes line-in {
