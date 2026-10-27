@@ -1,5 +1,8 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { BucketArtist, Scene, SceneBucket, hueOf, initialsOf, pinState } from '../engine-scene';
+import { ArtistDiscComponent } from '../artist-disc.component';
+import { ArtistHuePipe } from '../artist-hue.pipe';
+import { pinState } from '../artists';
+import { BucketArtist, Scene, SceneBucket } from '../scene.model';
 
 /** Rows shown before track picking; the list then grows to stay a few rows ahead of the cursor. */
 const ROWS = 10;
@@ -11,6 +14,7 @@ const ROWS_AHEAD = 4;
  */
 @Component({
   selector: 'app-buckets-station',
+  imports: [ArtistDiscComponent, ArtistHuePipe],
   templateUrl: './buckets-station.component.html',
   styleUrl: './buckets-station.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -20,8 +24,6 @@ export class BucketsStationComponent {
   /** The artist being followed: their cards stand out, every other card dims. */
   readonly pinned = input<string | null>(null);
 
-  protected readonly hueOf = hueOf;
-  protected readonly initialsOf = initialsOf;
   protected readonly pinState = pinState;
 
   protected visibleRows(bucket: SceneBucket): BucketArtist[] {

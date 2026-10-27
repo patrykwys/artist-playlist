@@ -17,7 +17,7 @@
         @for (artist of visibleRows(bucket); track artist.key; let i = $index) {
           <li
             class="row"
-            [style.--hue]="hueOf(artist.name)"
+            [style.--hue]="artist.name | artistHue"
             [attr.data-status]="artist.status"
             [attr.data-current]="i === bucket.cursor"
             [attr.data-flip]="'b' + b + ':' + artist.key"
@@ -28,7 +28,7 @@
             [title]="scoreTitle(artist)"
           >
             <span class="rank">{{ i + 1 }}</span>
-            <span class="engine-disc engine-disc-small">{{ initialsOf(artist.name) }}</span>
+            <app-artist-disc size="small" [name]="artist.name" />
             <span class="main">
               <span class="name">
                 {{ artist.name }}

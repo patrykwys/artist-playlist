@@ -5,13 +5,13 @@
     @if (s.gate; as gate) {
       <span
         class="token"
-        [style.--hue]="hueOf(gate.artist.name)"
+        [style.--hue]="gate.artist.name | artistHue"
         [attr.data-flip]="'artist:' + gate.artist.key"
         [attr.data-artist]="gate.artist.key"
         [attr.data-pinned]="pinState(pinned(), gate.artist.key)"
         data-from="anchor:pool"
       >
-        <span class="engine-disc">{{ initialsOf(gate.artist.name) }}</span>
+        <app-artist-disc [name]="gate.artist.name" />
         <span class="token-text">
           <span class="token-name">{{ gate.artist.name }}</span>
           <span class="token-meta">
@@ -48,7 +48,7 @@
       @for (artist of s.passed; track artist.key; let last = $last) {
         <span
           class="chip"
-          [style.--hue]="hueOf(artist.name)"
+          [style.--hue]="artist.name | artistHue"
           [attr.data-flip]="'artist:' + artist.key"
           [attr.data-artist]="artist.key"
           [attr.data-pinned]="pinState(pinned(), artist.key)"
@@ -56,7 +56,7 @@
           [attr.data-keep-visible]="last ? '' : null"
           [title]="describe(artist)"
         >
-          <span class="engine-disc engine-disc-small">{{ initialsOf(artist.name) }}</span>{{ artist.name }}
+          <app-artist-disc size="small" [name]="artist.name" />{{ artist.name }}
         </span>
       }
     </div>
@@ -74,14 +74,14 @@
       @for (artist of s.rejected; track artist.key; let last = $last) {
         <span
           class="chip chip-rejected"
-          [style.--hue]="hueOf(artist.name)"
+          [style.--hue]="artist.name | artistHue"
           [attr.data-flip]="'artist:' + artist.key"
           [attr.data-artist]="artist.key"
           [attr.data-pinned]="pinState(pinned(), artist.key)"
           [attr.data-keep-visible]="last ? '' : null"
           [title]="artist.name + ': ' + artist.reason"
         >
-          <span class="engine-disc engine-disc-small">{{ initialsOf(artist.name) }}</span>{{ artist.name }}
+          <app-artist-disc size="small" [name]="artist.name" />{{ artist.name }}
         </span>
       }
     </div>

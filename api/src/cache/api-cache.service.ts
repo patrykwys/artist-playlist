@@ -99,7 +99,7 @@ export class CachedLoader<T> {
     return values;
   }
 
-  /** Settles once every background refresh started so far has: for tests and shutdown. */
+  /** Settles once every background refresh started so far has: for tests. */
   async idle(): Promise<void> {
     await Promise.all(this.#refreshing.values());
   }

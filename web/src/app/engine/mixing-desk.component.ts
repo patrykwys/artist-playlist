@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, output } from '@angular/core';
 import { FormField, form, max, min } from '@angular/forms/signals';
-import { Scene, SceneConfig } from './engine-scene';
+import { Scene, SceneConfig } from './scene.model';
 import { DeskWeights, RemixedArtist, overlap, remix, varietyForLambda } from './remix';
 
 /** Rows shown per bucket, at least; more when a bucket's share of the playlist is bigger. */

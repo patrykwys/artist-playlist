@@ -183,12 +183,10 @@ export function sharedTags(a: TagMap, b: TagMap, count: number): string[] {
  */
 export const BLOCKED_TAG_WEIGHT = 20;
 
-/** Whether one of the blocked tags (normalised) is a big part of the profile. Exact tags only: "metal" ≠ "nu metal". */
-export function hasBlockedTag(tags: TagMap, blocked: ReadonlySet<string>): boolean {
-  return blockedTagOf(tags, blocked) !== null;
-}
-
-/** The first blocked tag that weighs enough in the profile to leave the artist out, or null. */
+/**
+ * The first blocked tag (normalised) that weighs enough in the profile to leave the artist out, or null.
+ * Exact tags only: "metal" ≠ "nu metal".
+ */
 export function blockedTagOf(tags: TagMap, blocked: ReadonlySet<string>): string | null {
   return [...blocked].find((tag) => (tags.get(tag) ?? 0) >= BLOCKED_TAG_WEIGHT) ?? null;
 }

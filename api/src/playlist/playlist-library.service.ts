@@ -167,7 +167,12 @@ function toModel(
 function groupTracks(rows: PlaylistTrackRow[]): Map<string, PlaylistTrackRow[]> {
   const grouped = new Map<string, PlaylistTrackRow[]>();
   for (const row of rows) {
-    grouped.set(row.playlist_id, [...(grouped.get(row.playlist_id) ?? []), row]);
+    const group = grouped.get(row.playlist_id);
+    if (group) {
+      group.push(row);
+    } else {
+      grouped.set(row.playlist_id, [row]);
+    }
   }
   return grouped;
 }

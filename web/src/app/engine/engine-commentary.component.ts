@@ -8,7 +8,8 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { LogLine, Story } from './engine-scene';
+import { Story } from './artist-story';
+import { LogLine } from './scene.model';
 
 /** Scrolled this close to the bottom, the commentary keeps following the newest line. */
 const FOLLOW_SLACK_PX = 24;

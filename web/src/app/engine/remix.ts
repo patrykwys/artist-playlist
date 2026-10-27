@@ -1,5 +1,5 @@
 import { TraceRanked, TraceScoreParts } from '../core/models';
-import { RankBucket } from './engine-scene';
+import { RankBucket } from './scene.model';
 
 /** The mixing desk's faders: the formula's weights, and Variety as on the Generate page (0…1). */
 export interface DeskWeights {

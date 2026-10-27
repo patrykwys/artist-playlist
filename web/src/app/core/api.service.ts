@@ -45,10 +45,6 @@ export class ApiService {
     return this.#http.post<GeneratedPlaylist[]>('/api/playlists/sync', {});
   }
 
-  generate(request: GenerateRequest): Observable<GeneratedPlaylist> {
-    return this.#http.post<GeneratedPlaylist>('/api/playlists', request);
-  }
-
   /**
    * Generates while streaming what the engine does (NDJSON, one event a line): batches of events as they
    * arrive. The last event is `done` with the playlist, or `error`.

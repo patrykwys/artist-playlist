@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { TraceSourceKind } from '../../core/models';
-import { Scene, SceneSource, artistKey, describeSource, pinState } from '../engine-scene';
+import { artistKey, pinState } from '../artists';
+import { describeSource } from '../narration';
+import { Scene, SceneSource } from '../scene.model';
 
 const SOURCE_ICONS: Record<TraceSourceKind, string> = { similar: '≈', tag: '#', genre: '#', hop: '↪' };
 

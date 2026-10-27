@@ -98,8 +98,15 @@ export class SessionService implements OnModuleInit {
   }
 
   createLoginState(): string {
+    // Logins abandoned on Spotify's page never come back to consume their state.
+    const now = Date.now();
+    for (const [expired, expiresAt] of this.#loginStates) {
+      if (expiresAt <= now) {
+        this.#loginStates.delete(expired);
+      }
+    }
     const state = randomBytes(16).toString('hex');
-    this.#loginStates.set(state, Date.now() + LOGIN_STATE_TTL_MS);
+    this.#loginStates.set(state, now + LOGIN_STATE_TTL_MS);
     return state;
   }
 

@@ -180,8 +180,8 @@ input[type='checkbox'] {
   color: var(--text);
 }
 
-/* Engine view: card copies flying between stations, and their arrow trails (engine/flights.ts). They live in
-   the theatre's fixed layer, outside the board component, so their styles can't be scoped to it. */
+/* Engine view: card copies flying between stations, and their arrow trails (engine/flight-layer.component.ts).
+   They are made outside Angular's templates, so their styles can't be scoped to a component. */
 
 .is-flying {
   z-index: 1;
