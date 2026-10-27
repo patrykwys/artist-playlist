@@ -19,6 +19,8 @@ import { TOP_TRACKS, TrackFit } from './track-fit.service.js';
 
 /** Titles tried on Spotify per artist before giving up on them. */
 const TRACK_ATTEMPTS = 3;
+/** When there are too few artists for the length, each picked artist may give up to this many tracks. */
+const MAX_TRACKS_PER_ARTIST = 3;
 
 export interface PickableArtist {
   key: string;
@@ -90,7 +92,7 @@ export class TrackPickerService {
   /**
    * Pass 1: each bucket fills its share, one track per artist, in ranking order.
    * Pass 2: buckets with artists left cover any shortfall.
-   * Pass 3: a second track from artists already picked.
+   * Pass 3: more tracks from artists already picked, one per artist a round, up to MAX_TRACKS_PER_ARTIST each.
    */
   async fill(
     session: Session,
@@ -121,16 +123,27 @@ export class TrackPickerService {
       }
     }
 
-    for (const state of states) {
-      for (const pick of [...state.picks]) {
-        if (missing() <= 0) {
-          break;
+    // An artist with nothing more to give is not asked again.
+    const exhausted = new Set<string>();
+    for (let round = 2; round <= MAX_TRACKS_PER_ARTIST && missing() > 0; round++) {
+      const before = length - missing();
+      for (const state of states) {
+        const artists = [...new Map(state.picks.map((pick) => [pick.artist.key, pick.artist])).values()];
+        for (const artist of artists.filter((candidate) => !exhausted.has(candidate.key))) {
+          if (missing() <= 0) {
+            break;
+          }
+          const found = await this.#findTrack(context, artist);
+          if (found) {
+            state.picks.push({ ...found, artist });
+          } else {
+            exhausted.add(artist.key);
+          }
+          this.#report(context, state, artist, found, 3);
         }
-        const found = await this.#findTrack(context, pick.artist);
-        if (found) {
-          state.picks.push({ ...found, artist: pick.artist });
-        }
-        this.#report(context, state, pick.artist, found, 3);
+      }
+      if (length - missing() === before) {
+        break;
       }
     }
 
@@ -216,9 +229,10 @@ export class TrackPickerService {
     return { track, similarTo };
   }
 
-  /** The first of the best few choices that Spotify has. */
+  /** The first of the best few choices, not in the playlist yet, that Spotify has. */
   async #findByTitle(context: FillContext, artist: PickableArtist, choices: TrackChoice[]): Promise<Found | null> {
-    for (const { title, similarTo } of choices.slice(0, TRACK_ATTEMPTS)) {
+    const fresh = choices.filter(({ title }) => !context.used.songs.has(songKey(artist, title)));
+    for (const { title, similarTo } of fresh.slice(0, TRACK_ATTEMPTS)) {
       const hits = await this.spotify.searchTracks(context.session, artist.name, title);
       const hit = findMatch(hits, artist.name, title);
       if (hit && isUsable(context, artist, hit)) {

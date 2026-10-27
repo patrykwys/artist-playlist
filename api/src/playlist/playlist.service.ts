@@ -168,7 +168,7 @@ export class PlaylistService {
       );
     }
 
-    const name = request.name.trim() || defaultName(request.seeds);
+    const name = request.name.trim() || defaultName(request.seeds, request.countries);
     const made = (id: string, url: string): GeneratedPlaylist => ({
       id,
       url,
@@ -284,6 +284,10 @@ function bucketSeeds(pool: CandidatePool, ranked: RankedBucket[], mode: MixMode)
   return pool.seeds.map((seed) => ({ label: seed.label, tags: seed.tags }));
 }
 
-function defaultName(seeds: PlaylistSeed[]): string {
-  return `Mix: ${seeds.map((seed) => seed.name).join(' + ')}`.slice(0, 100);
+const COUNTRY_NAMES = new Intl.DisplayNames(['en'], { type: 'region' });
+
+/** "Mix: hip hop + rap", and where from when a country filter was set: "Mix: hip hop + rap · Ireland". */
+function defaultName(seeds: PlaylistSeed[], countries: readonly string[]): string {
+  const from = countries.map((country) => COUNTRY_NAMES.of(country) ?? country).join(', ');
+  return `Mix: ${seeds.map((seed) => seed.name).join(' + ')}${from && ` · ${from}`}`.slice(0, 100);
 }

@@ -1,6 +1,6 @@
 import { MixMode, ScoringParams } from '../models.js';
 import { mmr } from './mmr.js';
-import { popularityGap } from './popularity.js';
+import { popularityGap, popularityShortfall } from './popularity.js';
 import { TagMap, cosine } from './tags.js';
 import { tfidf, unweighted } from './tfidf.js';
 
@@ -46,6 +46,11 @@ export interface PoolSeed {
   artist: PoolArtist | null;
   tags: TagMap;
   listeners: number | null;
+  /**
+   * A genre seed's stand-in for listeners: the median Last.fm listeners of its candidates. Candidates far smaller
+   * than it lose points (popularityShortfall); null for an artist seed, which has its own size.
+   */
+  sizeReference?: number | null;
   /** Candidate key → walk score from this seed, 0…1. */
   oneHop: ReadonlyMap<string, number>;
   twoHop: ReadonlyMap<string, number>;
@@ -130,7 +135,9 @@ export function scorer(pool: CandidatePool, params: ScoringParams): Scorer {
       const seed = pool.seeds[seedIndex];
       const walk = (params.hops === 2 ? seed.twoHop : seed.oneHop).get(artist.key) ?? 0;
       const tags = cosine(vectorOf(artist), seedVectors[seedIndex]);
-      const gap = popularityGap(artist.listeners, seed.listeners);
+      const gap = seed.artist
+        ? popularityGap(artist.listeners, seed.listeners)
+        : popularityShortfall(artist.listeners, seed.sizeReference ?? null);
       const relevance = params.walk * walk + params.tags * tags - params.popularity * gap;
       return { relevance, walk, tags, popularityGap: gap };
     },
