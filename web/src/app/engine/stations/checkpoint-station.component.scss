@@ -83,7 +83,13 @@
 }
 
 .light-mark {
-  font-weight: 700;
+  display: inline-flex;
+}
+
+.bin-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .light[data-light='off'] {
@@ -104,7 +110,7 @@
   border-color: var(--danger);
   background: var(--danger-soft);
   color: var(--danger);
-  animation: flash 500ms ease-out;
+  animation: flash 500ms var(--ease-out);
 }
 
 .reason {

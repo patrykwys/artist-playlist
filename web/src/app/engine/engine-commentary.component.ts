@@ -8,6 +8,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { LucideArrowDown, LucideX } from '@lucide/angular';
 import { Story } from './artist-story';
 import { LogLine } from './scene.model';
 
@@ -21,6 +22,7 @@ const FOLLOW_SLACK_PX = 24;
  */
 @Component({
   selector: 'app-engine-commentary',
+  imports: [LucideArrowDown, LucideX],
   templateUrl: './engine-commentary.component.html',
   styleUrl: './engine-commentary.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

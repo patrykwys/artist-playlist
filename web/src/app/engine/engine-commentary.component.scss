@@ -7,7 +7,7 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
-  transition: height 250ms ease-out;
+  transition: height 250ms var(--ease-out);
 }
 
 :host([data-open='true']) {
@@ -48,6 +48,8 @@
 }
 
 .unfollow {
+  display: inline-grid;
+  place-items: center;
   width: 22px;
   height: 22px;
   border: 0;
@@ -160,6 +162,9 @@
 }
 
 .to-latest {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   position: absolute;
   right: 16px;
   bottom: 10px;
@@ -176,7 +181,7 @@
 }
 
 .line-in {
-  animation: line-in 260ms ease-out;
+  animation: line-in 260ms var(--ease-out);
 }
 
 @keyframes line-in {

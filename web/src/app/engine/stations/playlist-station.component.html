@@ -20,7 +20,7 @@
           <span class="artist">{{ track.artist }}</span>
         </span>
         @if (track.similarTo) {
-          <span class="fits" aria-label="Fits a seed song">✦</span>
+          <span class="fits"><svg lucideSparkle title="Fits a seed song"></svg></span>
         }
       </li>
     } @empty {
@@ -36,7 +36,8 @@
         <span>Flow</span>
         <span class="value">{{ s.flow.greedy.toFixed(2) }}</span>
         @if (s.flow.score !== null && s.flow.score !== s.flow.greedy) {
-          → <span class="value value-better">{{ s.flow.score.toFixed(2) }}</span>
+          <svg lucideArrowRight class="flow-arrow"></svg>
+          <span class="value value-better">{{ s.flow.score.toFixed(2) }}</span>
         }
         <span class="note">
           {{ s.flow.reversals }} 2-opt {{ s.flow.reversals === 1 ? 'reversal' : 'reversals' }}
@@ -53,6 +54,7 @@
           animate.enter="engine-pop"
         >
           Open “{{ saved.name }}” in Spotify
+          <svg lucideExternalLink></svg>
         </a>
       } @else {
         <p class="dry-run" animate.enter="engine-pop">Dry run: “{{ saved.name }}” was not saved to Spotify</p>

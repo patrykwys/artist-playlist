@@ -63,7 +63,13 @@
 }
 
 .fits {
+  display: inline-flex;
   color: oklch(70% 0.15 85);
+}
+
+.flow-arrow {
+  align-self: center;
+  color: var(--text-muted);
 }
 
 .foot {

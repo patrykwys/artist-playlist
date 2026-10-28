@@ -47,7 +47,7 @@
           }
           <span class="name">{{ option.item.name }}</span>
           <span class="kind">{{ option.item.type === 'genre' ? 'Genre' : 'Artist' }}</span>
-          <span class="check" aria-hidden="true">✓</span>
+          <span class="check"><svg lucideCheck></svg></span>
         </li>
       }
     </ul>
@@ -73,7 +73,7 @@
           [disabled]="disabled()"
           (click)="remove(item)"
         >
-          ×
+          <svg lucideX></svg>
         </button>
       </li>
     }

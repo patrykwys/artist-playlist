@@ -31,3 +31,32 @@
   font-weight: 600;
   text-decoration: none;
 }
+
+/* The pending note swaps in for the button press; the finished playlist is the payoff after up to a minute of
+   waiting, so it rises in a little slower. */
+.fade-in {
+  animation: fade-in 200ms var(--ease-out);
+}
+
+.arrive {
+  animation: arrive 400ms var(--ease-out);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrive {
+    animation-name: fade-in;
+  }
+}

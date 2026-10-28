@@ -11,6 +11,11 @@
   --danger: #b42318;
   --danger-soft: #fdecea;
   --good: oklch(56% 0.15 150);
+  /* Lucide's chevron-down for native selects, stroked in --text-muted (a data URI can't read variables). */
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b6b66' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+
+  /* Motion: the one curve for anything entering, leaving or responding to a press. The built-in ease-out is too weak. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 
   color-scheme: light dark;
 }
@@ -29,6 +34,7 @@
     --danger: #f2877d;
     --danger-soft: #3a1e1b;
     --good: oklch(74% 0.14 150);
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239c9c96' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   }
 }
 
@@ -58,10 +64,24 @@ select {
   font: inherit;
 }
 
+/* The native arrow sits against the edge on Windows and ignores padding: draw our own, inset like the text. */
+select {
+  appearance: none;
+  padding-right: 36px;
+  background: var(--bg) var(--select-chevron) no-repeat right 12px center / 16px;
+  cursor: pointer;
+}
+
 input:focus,
 select:focus {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
+}
+
+/* Lucide icons (@lucide/angular): sit on the text line, never squeezed in a flex row. */
+.lucide {
+  flex: none;
+  vertical-align: -0.125em;
 }
 
 input[type='checkbox'] {
@@ -106,6 +126,7 @@ input[type='checkbox'] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   padding: 9px 16px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -116,6 +137,12 @@ input[type='checkbox'] {
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+
+/* Press feedback: the button gives a little under the pointer. */
+.button:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .button:hover {
@@ -164,15 +191,22 @@ input[type='checkbox'] {
 }
 
 .chip-remove {
+  display: grid;
+  place-items: center;
   width: 26px;
   height: 26px;
   border: 0;
   border-radius: 50%;
   background: transparent;
   color: var(--text-muted);
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1;
   cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+
+.chip-remove:active:not(:disabled) {
+  transform: scale(0.9);
 }
 
 .chip-remove:hover {
@@ -244,13 +278,13 @@ input[type='checkbox'] {
 }
 
 .engine-pop {
-  animation: engine-pop 320ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+  animation: engine-pop 240ms var(--ease-out);
 }
 
 @keyframes engine-pop {
   from {
     opacity: 0;
-    transform: scale(0.6);
+    transform: scale(0.9);
   }
 }
 
@@ -263,6 +297,16 @@ input[type='checkbox'] {
 @media (prefers-reduced-motion: reduce) {
   .engine-pop {
     animation: none;
+  }
+
+  .button,
+  .chip-remove {
+    transition: none;
+  }
+
+  .button:active,
+  .chip-remove:active {
+    transform: none;
   }
 }
 
@@ -283,7 +327,8 @@ input[type='checkbox'] {
   filter: grayscale(0.85);
 }
 
+/* Drawn inside the card (over its own border): the stations' scrolling lists clip anything outside it. */
 [data-pinned='yes'] {
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: -2px;
 }

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, output } from '@angular/core';
 import { FormField, form, max, min } from '@angular/forms/signals';
+import { LucideArrowDown, LucideArrowUp, LucideMinus, LucideX } from '@lucide/angular';
 import { Scene, SceneConfig } from './scene.model';
 import { DeskWeights, RemixedArtist, overlap, remix, varietyForLambda } from './remix';
 
@@ -20,7 +21,7 @@ const FADERS: { key: keyof DeskWeights; label: string; hint: string; ceiling: nu
  */
 @Component({
   selector: 'app-mixing-desk',
-  imports: [FormField],
+  imports: [FormField, LucideArrowDown, LucideArrowUp, LucideMinus, LucideX],
   templateUrl: './mixing-desk.component.html',
   styleUrl: './mixing-desk.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -70,15 +71,15 @@ export class MixingDeskComponent {
   }
 
   /** Places moved against the run's order: up, down, new to the top, or unchanged. */
-  protected move(artist: RemixedArtist, place: number): { kind: 'up' | 'down' | 'new' | 'same'; label: string } {
+  protected move(artist: RemixedArtist, place: number): { kind: 'up' | 'down' | 'new' | 'same'; places: number } {
     if (artist.runPlace === null) {
-      return { kind: 'new', label: 'new' };
+      return { kind: 'new', places: 0 };
     }
     const places = artist.runPlace - place;
     if (places === 0) {
-      return { kind: 'same', label: '–' };
+      return { kind: 'same', places: 0 };
     }
-    return places > 0 ? { kind: 'up', label: `↑${places}` } : { kind: 'down', label: `↓${-places}` };
+    return places > 0 ? { kind: 'up', places } : { kind: 'down', places: -places };
   }
 }
 

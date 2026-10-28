@@ -15,7 +15,10 @@
   [attr.data-on]="active() === 'discovery'"
   [attr.data-past]="isPast()('discovery')"
   aria-hidden="true"
-></div>
+>
+  <span class="stream"></span>
+  <svg lucideChevronRight class="arrow"></svg>
+</div>
 
 <section class="station" [attr.data-active]="active() === 'discovery'" aria-labelledby="station-discovery">
   <header class="station-head">
@@ -32,7 +35,10 @@
   [attr.data-on]="active() === 'checkpoint'"
   [attr.data-past]="isPast()('checkpoint')"
   aria-hidden="true"
-></div>
+>
+  <span class="stream"></span>
+  <svg lucideChevronRight class="arrow"></svg>
+</div>
 
 <section class="station" [attr.data-active]="active() === 'checkpoint'" aria-labelledby="station-checkpoint">
   <header class="station-head">
@@ -49,7 +55,10 @@
   [attr.data-on]="active() === 'buckets'"
   [attr.data-past]="isPast()('buckets')"
   aria-hidden="true"
-></div>
+>
+  <span class="stream"></span>
+  <svg lucideChevronRight class="arrow"></svg>
+</div>
 
 <section class="station" [attr.data-active]="active() === 'buckets'" aria-labelledby="station-buckets">
   <header class="station-head">
@@ -66,7 +75,10 @@
   [attr.data-on]="active() === 'playlist'"
   [attr.data-past]="isPast()('playlist')"
   aria-hidden="true"
-></div>
+>
+  <span class="stream"></span>
+  <svg lucideChevronRight class="arrow"></svg>
+</div>
 
 <section class="station" [attr.data-active]="active() === 'playlist'" aria-labelledby="station-playlist">
   <header class="station-head">

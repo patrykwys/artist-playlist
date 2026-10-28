@@ -1,10 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { LucideCornerDownRight, LucideDynamicIcon, LucideEqualApproximately, LucideHash, LucideIcon } from '@lucide/angular';
 import { TraceSourceKind } from '../../core/models';
 import { artistKey, pinState } from '../artists';
 import { describeSource } from '../narration';
 import { Scene, SceneSource } from '../scene.model';
 
-const SOURCE_ICONS: Record<TraceSourceKind, string> = { similar: '≈', tag: '#', genre: '#', hop: '↪' };
+const SOURCE_ICONS: Record<TraceSourceKind, LucideIcon> = {
+  similar: LucideEqualApproximately,
+  tag: LucideHash,
+  genre: LucideHash,
+  hop: LucideCornerDownRight,
+};
 
 /**
  * Station 2: where related artists come from, per seed (similar artists, top tags, second hops), pouring into
@@ -12,6 +18,7 @@ const SOURCE_ICONS: Record<TraceSourceKind, string> = { similar: '≈', tag: '#'
  */
 @Component({
   selector: 'app-discovery-station',
+  imports: [LucideDynamicIcon],
   templateUrl: './discovery-station.component.html',
   styleUrl: './discovery-station.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

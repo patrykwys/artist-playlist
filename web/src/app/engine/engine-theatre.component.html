@@ -44,7 +44,7 @@
         aria-label="Replay"
         (click)="player.replay()"
       >
-        ↺
+        <svg lucideRotateCcw></svg>
       </button>
       <button
         type="button"
@@ -52,7 +52,11 @@
         [attr.aria-label]="player.isPlaying() && !player.isAtEnd() ? 'Pause' : 'Play'"
         (click)="player.toggle()"
       >
-        {{ player.isPlaying() && !player.isAtEnd() ? '❚❚' : '▶' }}
+        @if (player.isPlaying() && !player.isAtEnd()) {
+          <svg lucidePause></svg>
+        } @else {
+          <svg lucidePlay></svg>
+        }
       </button>
       <div class="speeds" role="group" aria-label="Speed">
         @for (speed of speeds; track speed) {
@@ -73,7 +77,7 @@
         aria-label="Skip to the end"
         (click)="player.skipToEnd()"
       >
-        ⏭
+        <svg lucideSkipForward></svg>
       </button>
       <button
         #closeButton
@@ -83,7 +87,7 @@
         aria-label="Close"
         (click)="close.emit()"
       >
-        ✕
+        <svg lucideX></svg>
       </button>
     </div>
   </header>

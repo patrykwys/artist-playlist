@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { LucideArrowRight, LucideExternalLink, LucideSparkle } from '@lucide/angular';
 import { pinState } from '../artists';
 import { Scene } from '../scene.model';
 
@@ -8,6 +9,7 @@ import { Scene } from '../scene.model';
  */
 @Component({
   selector: 'app-playlist-station',
+  imports: [LucideArrowRight, LucideExternalLink, LucideSparkle],
   templateUrl: './playlist-station.component.html',
   styleUrl: './playlist-station.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

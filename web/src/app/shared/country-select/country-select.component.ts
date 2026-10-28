@@ -12,6 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormValueControl } from '@angular/forms/signals';
+import { LucideCheck, LucideChevronDown, LucideGlobe, LucideX } from '@lucide/angular';
 import { COUNTRY_CODES } from './countries';
 import { FlagUrlPipe } from './flag-url.pipe';
 
@@ -36,7 +37,18 @@ const COUNTRY_NAMES = new Map(COUNTRIES.map((country) => [country.code, country.
  */
 @Component({
   selector: 'app-country-select',
-  imports: [Combobox, ComboboxPopup, ComboboxWidget, Listbox, Option, FlagUrlPipe],
+  imports: [
+    Combobox,
+    ComboboxPopup,
+    ComboboxWidget,
+    Listbox,
+    Option,
+    FlagUrlPipe,
+    LucideCheck,
+    LucideChevronDown,
+    LucideGlobe,
+    LucideX,
+  ],
   templateUrl: './country-select.component.html',
   styleUrl: './country-select.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

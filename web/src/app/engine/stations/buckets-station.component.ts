@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { LucideArrowDown, LucideArrowUp, LucideCheck, LucideEllipsis, LucideX } from '@lucide/angular';
 import { ArtistDiscComponent } from '../artist-disc.component';
 import { ArtistHuePipe } from '../artist-hue.pipe';
 import { pinState } from '../artists';
@@ -14,7 +15,15 @@ const ROWS_AHEAD = 4;
  */
 @Component({
   selector: 'app-buckets-station',
-  imports: [ArtistDiscComponent, ArtistHuePipe],
+  imports: [
+    ArtistDiscComponent,
+    ArtistHuePipe,
+    LucideArrowDown,
+    LucideArrowUp,
+    LucideCheck,
+    LucideEllipsis,
+    LucideX,
+  ],
   templateUrl: './buckets-station.component.html',
   styleUrl: './buckets-station.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -25,6 +34,8 @@ export class BucketsStationComponent {
   readonly pinned = input<string | null>(null);
 
   protected readonly pinState = pinState;
+  /** The rows shown at ranking fly in from the shortlist; the ones revealed later were in the bucket already. */
+  protected readonly rows = ROWS;
 
   protected visibleRows(bucket: SceneBucket): BucketArtist[] {
     return bucket.artists.slice(0, Math.max(ROWS, bucket.cursor + ROWS_AHEAD + 1));

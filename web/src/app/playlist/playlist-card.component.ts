@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { LucideExternalLink } from '@lucide/angular';
 import { formatPlaytime, formatTrackLength } from '../core/format';
 import { GeneratedPlaylist } from '../core/models';
 import { describeReason } from './track-reason';
@@ -8,7 +9,7 @@ type CoverLayout = 'grid' | 'single' | 'empty';
 
 @Component({
   selector: 'app-playlist-card',
-  imports: [DatePipe],
+  imports: [DatePipe, LucideExternalLink],
   templateUrl: './playlist-card.component.html',
   styleUrl: './playlist-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

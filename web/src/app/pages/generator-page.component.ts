@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { LucideArrowRight } from '@lucide/angular';
 import { PlaylistOptions } from '../core/models';
 import { EngineTheatreComponent } from '../engine/engine-theatre.component';
 import { GeneratePanelComponent } from '../playlist/generate-panel.component';
@@ -13,6 +14,7 @@ import { SeedsStore } from '../seeds/seeds.store';
   selector: 'app-generator-page',
   imports: [
     RouterLink,
+    LucideArrowRight,
     SeedSearchComponent,
     SeedListComponent,
     GeneratePanelComponent,
