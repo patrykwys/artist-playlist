@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { LucideChevronRight } from '@lucide/angular';
 import { TraceStage } from '../core/models';
 import { Scene } from './scene.model';
 import { BucketsStationComponent } from './stations/buckets-station.component';
@@ -45,6 +46,7 @@ const WAITING_ON: Record<TraceStage, string> = {
     CheckpointStationComponent,
     BucketsStationComponent,
     PlaylistStationComponent,
+    LucideChevronRight,
   ],
   templateUrl: './engine-board.component.html',
   styleUrl: './engine-board.component.scss',

@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormValueControl } from '@angular/forms/signals';
+import { LucideCheck, LucideX } from '@lucide/angular';
 import { catchError, debounceTime, forkJoin, map, of, switchMap, tap } from 'rxjs';
 import { ApiService } from '../core/api.service';
 import { ArtistSeed, GenreSeed, PlaylistSeed } from '../core/models';
@@ -48,7 +49,7 @@ export function blockKey(item: PlaylistSeed): string {
  */
 @Component({
   selector: 'app-block-select',
-  imports: [Combobox, ComboboxPopup, ComboboxWidget, Listbox, Option],
+  imports: [Combobox, ComboboxPopup, ComboboxWidget, Listbox, Option, LucideCheck, LucideX],
   templateUrl: './block-select.component.html',
   styleUrl: './block-select.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

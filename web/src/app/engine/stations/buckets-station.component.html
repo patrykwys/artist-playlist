@@ -17,13 +17,14 @@
         @for (artist of visibleRows(bucket); track artist.key; let i = $index) {
           <li
             class="row"
+            animate.enter="row-in"
             [style.--hue]="artist.name | artistHue"
             [attr.data-status]="artist.status"
             [attr.data-current]="i === bucket.cursor"
             [attr.data-flip]="'b' + b + ':' + artist.key"
             [attr.data-artist]="artist.key"
             [attr.data-pinned]="pinState(pinned(), artist.key)"
-            [attr.data-from]="origin(artist)"
+            [attr.data-from]="i < rows ? origin(artist) : null"
             [attr.data-keep-visible]="i === bucket.cursor ? '' : null"
             [title]="scoreTitle(artist)"
           >
@@ -36,8 +37,12 @@
                   <span class="badge">seed</span>
                 }
                 @if (s.lineup && artist.shift !== 0 && artist.status === 'waiting') {
-                  <span class="shift" [attr.data-up]="artist.shift > 0">
-                    {{ artist.shift > 0 ? '↑' + artist.shift : '↓' + -artist.shift }}
+                  <span class="shift" animate.enter="engine-pop" [attr.data-up]="artist.shift > 0">
+                    @if (artist.shift > 0) {
+                      <svg lucideArrowUp></svg>{{ artist.shift }}
+                    } @else {
+                      <svg lucideArrowDown></svg>{{ -artist.shift }}
+                    }
                   </span>
                 }
               </span>
@@ -56,7 +61,21 @@
               <span></span>
               <span></span>
             }
-            <span class="status" aria-hidden="true"></span>
+            <span class="status">
+              @switch (artist.status) {
+                @case ('found') {
+                  <svg lucideCheck></svg>
+                }
+                @case ('missing') {
+                  <svg lucideX></svg>
+                }
+                @default {
+                  @if (i === bucket.cursor) {
+                    <svg lucideEllipsis></svg>
+                  }
+                }
+              }
+            </span>
           </li>
         }
       </ol>

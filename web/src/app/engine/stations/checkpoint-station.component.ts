@@ -1,11 +1,25 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import {
+  LucideCheck,
+  LucideCircleDashed,
+  LucideDynamicIcon,
+  LucideIcon,
+  LucideMinus,
+  LucideX,
+} from '@lucide/angular';
 import { formatCompact } from '../../core/format';
 import { ArtistDiscComponent } from '../artist-disc.component';
 import { ArtistHuePipe } from '../artist-hue.pipe';
 import { pinState } from '../artists';
 import { GATES, Light, Scene, SceneArtist } from '../scene.model';
 
-const LIGHT_MARKS: Record<Light, string> = { off: 'off', pass: '✓', fail: '✕', skip: '–' };
+/** Each filter light's mark, and what it means for screen readers and on hover. */
+const LIGHT_MARKS: Record<Light, { icon: LucideIcon; meaning: string }> = {
+  off: { icon: LucideCircleDashed, meaning: 'not set' },
+  pass: { icon: LucideCheck, meaning: 'passed' },
+  fail: { icon: LucideX, meaning: 'failed' },
+  skip: { icon: LucideMinus, meaning: 'not reached' },
+};
 
 /**
  * Station 3: one artist at a time stands in the gate while the filters light up (seed? blocked? listeners?
@@ -13,7 +27,7 @@ const LIGHT_MARKS: Record<Light, string> = { off: 'off', pass: '✓', fail: '✕
  */
 @Component({
   selector: 'app-checkpoint-station',
-  imports: [ArtistDiscComponent, ArtistHuePipe],
+  imports: [ArtistDiscComponent, ArtistHuePipe, LucideCheck, LucideDynamicIcon, LucideX],
   templateUrl: './checkpoint-station.component.html',
   styleUrl: './checkpoint-station.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

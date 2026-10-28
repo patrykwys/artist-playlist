@@ -4,7 +4,9 @@
   @if (story(); as story) {
     <span class="following">
       Following <strong>{{ story.name }}</strong>
-      <button type="button" class="unfollow" aria-label="Stop following" (click)="unfollow.emit()">✕</button>
+      <button type="button" class="unfollow" aria-label="Stop following" (click)="unfollow.emit()">
+        <svg lucideX></svg>
+      </button>
     </span>
   } @else {
     <span class="hint">Click an artist card to follow it · click a line to see the floor at that moment</span>
@@ -32,6 +34,6 @@
     }
   </ol>
   @if (!isAtLatest()) {
-    <button type="button" class="to-latest" (click)="toLatest()">Latest ↓</button>
+    <button type="button" class="to-latest" (click)="toLatest()">Latest <svg lucideArrowDown></svg></button>
   }
 </div>

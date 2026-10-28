@@ -15,7 +15,7 @@
             [attr.data-keep-visible]="source.id === latest()?.id ? '' : null"
             [title]="describeSource(source.via, source.through, source.total) + ': ' + source.sample.join(', ')"
           >
-            <span class="source-icon">{{ icons[source.via] }}</span>
+            <span class="source-icon"><svg [lucideIcon]="icons[source.via]"></svg></span>
             <span class="source-through">{{ source.through }}</span>
             <span class="source-count">+{{ source.total }}</span>
           </li>
@@ -39,7 +39,7 @@
       [attr.data-flip]="'intake:' + source.id"
       [attr.data-from]="'src:' + source.id"
     >
-      {{ icons[source.via] }} {{ source.through }} +{{ source.total }}
+      <svg [lucideIcon]="icons[source.via]"></svg> {{ source.through }} +{{ source.total }}
     </span>
   }
 </div>

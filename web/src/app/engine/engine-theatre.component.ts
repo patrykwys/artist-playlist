@@ -13,6 +13,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { LucidePause, LucidePlay, LucideRotateCcw, LucideSkipForward, LucideX } from '@lucide/angular';
 import { TraceEvent, TraceStage } from '../core/models';
 import { Story, storyOf } from './artist-story';
 import { EngineBoardComponent } from './engine-board.component';
@@ -39,7 +40,17 @@ const STAGES: { id: TraceStage; label: string }[] = [
  */
 @Component({
   selector: 'app-engine-theatre',
-  imports: [EngineBoardComponent, EngineCommentaryComponent, FlightLayerComponent, MixingDeskComponent],
+  imports: [
+    EngineBoardComponent,
+    EngineCommentaryComponent,
+    FlightLayerComponent,
+    MixingDeskComponent,
+    LucidePause,
+    LucidePlay,
+    LucideRotateCcw,
+    LucideSkipForward,
+    LucideX,
+  ],
   templateUrl: './engine-theatre.component.html',
   styleUrl: './engine-theatre.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

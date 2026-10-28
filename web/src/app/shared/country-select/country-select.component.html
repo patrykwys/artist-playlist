@@ -7,9 +7,9 @@
     [(expanded)]="expanded"
     [disabled]="disabled()"
   >
-    <span class="flag" aria-hidden="true">🌐</span>
+    <span class="flag"><svg lucideGlobe></svg></span>
     <span class="name">{{ value().length === 0 ? 'Any country' : 'Add another country' }}</span>
-    <span class="chevron" aria-hidden="true">▾</span>
+    <span class="chevron"><svg lucideChevronDown></svg></span>
   </div>
 
   <ng-template ngComboboxPopup [combobox]="combobox">
@@ -38,7 +38,7 @@
             loading="lazy"
           />
           <span class="name">{{ country.name }}</span>
-          <span class="check" aria-hidden="true">✓</span>
+          <span class="check"><svg lucideCheck></svg></span>
         </li>
       }
     </ul>
@@ -58,7 +58,7 @@
           [disabled]="disabled()"
           (click)="remove(country.code)"
         >
-          ×
+          <svg lucideX></svg>
         </button>
       </li>
     }

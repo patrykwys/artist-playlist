@@ -44,8 +44,8 @@
 }
 
 .source-icon {
+  display: inline-flex;
   color: oklch(55% 0.16 var(--hue));
-  font-weight: 700;
 }
 
 .source-through {

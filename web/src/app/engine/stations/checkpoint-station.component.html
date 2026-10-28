@@ -32,7 +32,8 @@
     @for (gateDef of gates; track gateDef.id) {
       @let light = s.gate ? s.gate.lights[gateDef.id] : 'off';
       <li class="light" [attr.data-light]="light">
-        <span class="light-mark">{{ marks[light] }}</span> {{ gateDef.label }}
+        <span class="light-mark"><svg [lucideIcon]="marks[light].icon" [title]="marks[light].meaning"></svg></span>
+        {{ gateDef.label }}
       </li>
     }
   </ul>
@@ -43,7 +44,7 @@
 
 <div class="bins">
   <div class="bin bin-pass" data-anchor="anchor:shortlist">
-    <p class="bin-head"><span>✓ Shortlist</span><span class="count">{{ s.passed.length }}</span></p>
+    <p class="bin-head"><span class="bin-title"><svg lucideCheck></svg> Shortlist</span><span class="count">{{ s.passed.length }}</span></p>
     <div class="bin-body" data-scroll>
       @for (artist of s.passed; track artist.key; let last = $last) {
         <span
@@ -62,7 +63,7 @@
     </div>
   </div>
   <div class="bin bin-fail">
-    <p class="bin-head"><span>✕ Rejected</span><span class="count">{{ s.rejected.length }}</span></p>
+    <p class="bin-head"><span class="bin-title"><svg lucideX></svg> Rejected</span><span class="count">{{ s.rejected.length }}</span></p>
     @if (rejectedBy().length > 0) {
       <p class="tallies">
         @for (entry of rejectedBy(); track entry[0]) {

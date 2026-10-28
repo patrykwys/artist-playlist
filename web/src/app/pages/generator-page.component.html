@@ -45,7 +45,7 @@
     <section class="latest" animate.enter="arrive">
       <div class="latest-head">
         <h2 class="section-title">Just created</h2>
-        <a class="latest-link" routerLink="/playlists">All my playlists →</a>
+        <a class="latest-link" routerLink="/playlists">All my playlists <svg lucideArrowRight></svg></a>
       </div>
       <app-playlist-card [playlist]="latest" [expanded]="true" (watch)="isWatching.set(true)" />
     </section>

@@ -1,7 +1,9 @@
 <aside class="desk" aria-labelledby="desk-title">
   <header class="head">
     <h3 id="desk-title" class="title">Mixing desk</h3>
-    <button type="button" class="close" aria-label="Close the mixing desk" (click)="close.emit()">✕</button>
+    <button type="button" class="close" aria-label="Close the mixing desk" (click)="close.emit()">
+      <svg lucideX></svg>
+    </button>
   </header>
   <p class="intro">
     Move a fader to see how each bucket would rank with other weights. Nothing changes in the run; to know whether
@@ -41,7 +43,22 @@
               <span class="rank">{{ i + 1 }}</span>
               <span class="name">{{ artist.name }}</span>
               <span class="score">{{ artist.relevance.toFixed(2) }}</span>
-              <span class="move">{{ moved.label }}</span>
+              <span class="move">
+                @switch (moved.kind) {
+                  @case ('up') {
+                    <svg lucideArrowUp></svg>{{ moved.places }}
+                  }
+                  @case ('down') {
+                    <svg lucideArrowDown></svg>{{ moved.places }}
+                  }
+                  @case ('same') {
+                    <svg lucideMinus title="Same place"></svg>
+                  }
+                  @default {
+                    new
+                  }
+                }
+              </span>
             </li>
           }
         </ol>
