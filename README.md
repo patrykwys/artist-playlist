@@ -42,9 +42,6 @@ Fill in `.env`:
 | `LASTFM_API_KEY` | Your Last.fm key |
 | `TOKEN_ENCRYPTION_KEY` | Any random secret. Make one with `node -p "require('node:crypto').randomBytes(32).toString('base64')"` |
 
-The database is SQLite, so there is nothing to install. The API creates `api/data/artist-mix.db` on its first
-start and sets up the tables itself.
-
 ### Run
 
 ```bash
@@ -58,15 +55,6 @@ cd web
 npm install
 npm start
 ```
-
-Open **http://127.0.0.1:4200**. Use exactly that address, not `localhost`, because Spotify doesn't accept
-`localhost` for logins. Then log in with Spotify.
-
-### Other users
-
-A Spotify app in Development Mode works for up to 5 users. The app owner is always allowed. Anyone else who logs
-in through your Spotify app must be added under **User Management** in the Spotify dashboard, or Spotify
-refuses the login. People can also create their own Spotify app and use its keys instead.
 
 ## Algorithm
 
